@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>天枢</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <div class="brand">
+        <svg class="taiji" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M50,2 A48,48 0 0,1 50,98 A24,24 0 0,1 50,50 A24,24 0 0,0 50,2 Z" fill="currentColor"/>
+          <circle cx="50" cy="26" r="6" fill="var(--paper)"/>
+          <circle cx="50" cy="74" r="6" fill="currentColor"/>
+        </svg>
+        <div class="brand-text">
+          <h1>八字排盘</h1>
+          <p>天干地支 · 阴阳五行 · 知命安身</p>
+        </div>
+      </div>
+      <nav class="tabs">
+        <button class="tab active" data-page="input">录入</button>
+        <button class="tab" data-page="paipan">命盘</button>
+        <button class="tab" data-page="dayun">大运</button>
+        <button class="tab" data-page="read">解读</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- 录入 -->
+      <section class="page active" id="page-input">
+        <p class="lede">命由天定，运由己造。请录入生辰，以推四柱。<br>融天文节气定盘、真太阳时校正、农历公历互通、神煞格局全备、分时期人生解读。</p>
+
+        <form class="form" id="form" autocomplete="off">
+          <div class="field">
+            <label>姓名</label>
+            <input type="text" id="f-name" placeholder="可不填" />
+          </div>
+
+          <div class="field">
+            <label>性别</label>
+            <div class="seg" role="radiogroup">
+              <label><input type="radio" name="gender" value="male" checked><span>男命 · 乾造</span></label>
+              <label><input type="radio" name="gender" value="female"><span>女命 · 坤造</span></label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>历法</label>
+            <div class="seg">
+              <label><input type="radio" name="cal" value="solar" id="cal-solar" checked><span>公历</span></label>
+              <label><input type="radio" name="cal" value="lunar" id="cal-lunar"><span>农历</span></label>
+            </div>
+          </div>
+
+          <div class="field" id="row-leap" hidden>
+            <label>闰月</label>
+            <label class="check"><input type="checkbox" id="f-leap"><span>此农历月为闰月（如闰五月）</span></label>
+          </div>
+
+          <div class="grid3">
+            <div class="field">
+              <label id="lbl-year">出生年</label>
+              <input type="number" id="f-year" value="1990" min="1900" max="2100" />
+            </div>
+            <div class="field">
+              <label id="lbl-month">出生月</label>
+              <input type="number" id="f-month" value="6" min="1" max="12" />
+            </div>
+            <div class="field">
+              <label id="lbl-day">出生日</label>
+              <input type="number" id="f-day" value="15" min="1" max="31" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>出生时辰</label>
+            <select id="f-shi" class="shichen"></select>
+            <p class="hint"><span id="shi-range"></span><span id="shi-solar"></span></p>
+          </div>
+
+          <details class="advanced">
+            <summary>高级 · 真太阳时校正</summary>
+            <div class="grid3">
+              <div class="field">
+                <label>出生经度</label>
+                <div class="with-unit"><input type="number" id="f-lon" value="120" min="70" max="140" step="0.1"><span>°E</span></div>
+              </div>
+              <div class="field">
+                <label>时区</label>
+                <div class="with-unit"><input type="number" id="f-tz" value="8" min="-12" max="14"><span>UTC+</span></div>
+              </div>
+              <div class="field">
+                <label>真太阳时</label>
+                <label class="check"><input type="checkbox" id="f-tst" checked><span>启用校正</span></label>
+              </div>
+            </div>
+          </details>
+
+          <div class="actions">
+            <button type="button" class="ghost" id="btn-now">用当前时刻</button>
+            <button type="submit" class="primary">开始排盘</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 命盘 -->
+      <section class="page" id="page-paipan">
+        <div class="idcard" id="idcard"></div>
+
+        <div class="bazi-table" id="bazi-table"></div>
+
+        <div class="chips" id="solar-note"></div>
+
+        <div class="tri">
+          <div class="tri-box">
+            <h4>神煞</h4>
+            <div id="shensha-list" class="tri-body"></div>
+          </div>
+          <div class="tri-box">
+            <h4>空亡</h4>
+            <div id="kongwang-list" class="tri-body"></div>
+          </div>
+          <div class="tri-box">
+            <h4>刑冲合害</h4>
+            <div id="relations-list" class="tri-body"></div>
+          </div>
+        </div>
+
+        <section class="block">
+          <h3 class="block-title">五行力量分布</h3>
+          <div class="wx-bars" id="wx-bars"></div>
+          <p class="wx-note" id="wx-note"></p>
+        </section>
+
+        <div class="jump">
+          <button class="ghost" data-goto="dayun">查看大运流年 →</button>
+          <button class="ghost" data-goto="read">查看命盘解读 →</button>
+        </div>
+      </section>
+
+      <!-- 大运 -->
+      <section class="page" id="page-dayun">
+        <p class="dayun-intro" id="dayun-intro"></p>
+        <h3 class="block-title">大运轨迹</h3>
+        <div class="timeline" id="dayun-timeline"></div>
+
+        <section class="block">
+          <h3 class="block-title">流年</h3>
+          <div class="liunian-grid" id="liunian-grid"></div>
+        </section>
+      </section>
+
+      <!-- 解读 -->
+      <section class="page" id="page-read">
+        <div id="read-content"></div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span class="seal">知命</span>
+      本排盘以传统命理学为据，仅供参考，切勿迷信。
+      <span class="seal">安身</span>
+    </footer>
+  </div>
+
+  <script src="js/engine.js"></script>
+  <script src="js/engine-plus.js"></script>
+  <script src="js/interpret.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

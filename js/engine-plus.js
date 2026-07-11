@@ -161,9 +161,10 @@
     };
     res.push(...match('华盖', [huagaiMap[yearZhi], huagaiMap[dayZhi]]));
 
-    // 天医（月支前一位地支）
-    const tianyiMap = ['丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子'];
-    res.push(...match('天医', [tianyiMap[monthZhi]]));
+    // 天医：月支的前一位（正月建寅起丑，顺行：寅→丑、卯→寅…子→亥）
+    const monthZhiIdx = result.pillars.month.zhi; // 0子..11亥
+    const tianyiZhi = DIZHI[(monthZhiIdx - 1 + 12) % 12];
+    res.push(...match('天医', [tianyiZhi]));
 
     // 禄神（日干临官地支）
     const luMap = {
@@ -187,7 +188,10 @@
   const LIUHE = [['子', '丑'], ['寅', '亥'], ['卯', '戌'], ['辰', '酉'], ['巳', '申'], ['午', '未']];
   const SANHE = [['申', '子', '辰'], ['亥', '卯', '未'], ['寅', '午', '戌'], ['巳', '酉', '丑']];
   const SANHUI = [['寅', '卯', '辰'], ['巳', '午', '未'], ['申', '酉', '戌'], ['亥', '子', '丑']];
-  const SANXING = [['寅', '巳', '申'], ['丑', '戌', '未'], ['子', '卯'], ['辰', '午', '酉', '亥']];
+  // 三刑：寅巳申(无恩)、丑戌未(持势)、子卯(无礼) —— 两两相见即论刑
+  // 自刑(辰辰/午午/酉酉/亥亥)只在同支时成立，不放在此表
+  const SANXING = [['寅', '巳', '申'], ['丑', '戌', '未'], ['子', '卯']];
+  const ZIXING = ['辰', '午', '酉', '亥']; // 自刑：只在 a===b 时才触发
   const LIUHAI = [['子', '未'], ['丑', '午'], ['寅', '巳'], ['卯', '辰'], ['申', '亥'], ['酉', '戌']];
   const LIUPO = [['子', '酉'], ['丑', '辰'], ['寅', '亥'], ['卯', '午'], ['巳', '申'], ['未', '戌']];
 
@@ -198,19 +202,24 @@
     return groups.find(g => g.includes(a) && g.includes(b));
   }
   // 返回两个地支之间的关系数组（可能多项）
+  // 注意：三合/三会仅两支同局时标「半合/半会」，三支齐全才标「三合/三会」
+  // 本函数只看两支；三支齐全的判定在 pillarRelations 里补全。
   function relations(a, b) {
     const out = [];
-    if (a === b) return out;
+    if (a === b) {
+      if (ZIXING.includes(a)) out.push('自刑');
+      return out;
+    }
     if (hasPair(a, b, CHONG)) out.push('冲');
     if (hasPair(a, b, LIUHE)) out.push('合');
-    if (inGroup(a, b, SANHE)) out.push('三合');
-    if (inGroup(a, b, SANHUI)) out.push('三会');
+    if (inGroup(a, b, SANHE)) out.push('半合');
+    if (inGroup(a, b, SANHUI)) out.push('半会');
     if (inGroup(a, b, SANXING)) out.push('刑');
     if (hasPair(a, b, LIUHAI)) out.push('害');
     if (hasPair(a, b, LIUPO)) out.push('破');
     return out;
   }
-  // 四柱地支两两关系
+  // 四柱地支两两关系 + 三合/三会成局
   function pillarRelations(result) {
     const keys = ['year', 'month', 'day', 'hour'];
     const pillars = ['年', '月', '日', '时'];
@@ -222,17 +231,30 @@
         if (rel.length) out.push({ a: pillars[i], b: pillars[j], az: zhis[i], bz: zhis[j], type: rel });
       }
     }
+    // 三合/三会：四柱中是否集齐整组
+    const set = new Set(zhis);
+    SANHE.forEach(g => {
+      if (g.every(z => set.has(z))) {
+        out.push({ a: '三合', b: '', az: g.join(''), bz: '', type: ['三合'] });
+      }
+    });
+    SANHUI.forEach(g => {
+      if (g.every(z => set.has(z))) {
+        out.push({ a: '三会', b: '', az: g.join(''), bz: '', type: ['三会'] });
+      }
+    });
     return out;
   }
 
   /* ============== 5. 日主旺衰 ============== */
   // 月令旺相休囚死：以月支五行(M)为令。
+  // 例木旺：木旺、火相、水休、金囚、土死
   function monthState(dayWx, monthWx) {
-    if (dayWx === monthWx) return { name: '旺', val: 5 };
-    if (SHENG[monthWx] === dayWx) return { name: '相', val: 3 };
-    if (SHENG_WO[monthWx] === dayWx) return { name: '休', val: 1 };
-    if (KE[monthWx] === dayWx) return { name: '囚', val: -1 };
-    if (KE_WO[monthWx] === dayWx) return { name: '死', val: -2 };
+    if (dayWx === monthWx) return { name: '旺', val: 5 };           // 同我
+    if (SHENG[monthWx] === dayWx) return { name: '相', val: 3 };    // 月所生
+    if (SHENG_WO[monthWx] === dayWx) return { name: '休', val: 1 }; // 生月者
+    if (KE_WO[monthWx] === dayWx) return { name: '囚', val: -1 };   // 克月者
+    if (KE[monthWx] === dayWx) return { name: '死', val: -2 };      // 月所克
     return { name: '中', val: 0 };
   }
   function dayMasterStrength(result) {
@@ -272,12 +294,13 @@
     // 月支藏干十神
     const monthCang = ZHI_CANGGAN[monthZhi];
     const monthShenList = monthCang.map(g => tenGod(dayGan, TIANGAN.indexOf(g)));
-    // 四柱天干透出十神
-    const TianShen = allGan.map(g => tenGod(dayGan, g)).filter(s => s && s !== '比肩' && s !== '劫财');
+    // 四柱天干透出十神（含比劫，用于组合；取格时另滤）
+    const allShen = allGan.map(g => tenGod(dayGan, g));
+    const TianShen = allShen.filter(s => s && s !== '比肩' && s !== '劫财');
     // 取格：月支藏干中，若其十神透出天干，则取之；否则取本气十神。
     let primary = null;
     for (const shen of monthShenList) {
-      if (TianShen.includes(shen)) { primary = shen; break; }
+      if (TianShen.includes(shen) || allShen.includes(shen)) { primary = shen; break; }
     }
     if (!primary) primary = monthShenList[0]; // 本气
 
@@ -296,17 +319,18 @@
       gridName = map[primary] || (primary + '格');
     }
 
-    // 组合格局
-    const has = (s) => TianShen.includes(s);
+    // 组合格局（比劫需从 allShen 看，因 TianShen 已滤掉）
+    const has = (s) => allShen.includes(s);
+    const hasNT = (s) => TianShen.includes(s); // 非比劫透干
     const combos = [];
-    if (has('食神') && has('七杀')) combos.push('食神制杀');
-    if (has('伤官') && has('七杀')) combos.push('伤官制杀');
-    if (has('七杀') && (has('正印') || has('偏印'))) combos.push('杀印相生');
-    if (has('伤官') && (has('正财') || has('偏财'))) combos.push('伤官生财');
-    if (has('食神') && (has('正财') || has('偏财'))) combos.push('食神生财');
-    if (has('正官') && (has('正财') || has('偏财'))) combos.push('财官相生');
-    if (has('正官') && (has('正印') || has('偏印'))) combos.push('官印相生');
-    if (has('正印') && has('比肩')) combos.push('印比护身');
+    if (hasNT('食神') && hasNT('七杀')) combos.push('食神制杀');
+    if (hasNT('伤官') && hasNT('七杀')) combos.push('伤官制杀');
+    if (hasNT('七杀') && (hasNT('正印') || hasNT('偏印'))) combos.push('杀印相生');
+    if (hasNT('伤官') && (hasNT('正财') || hasNT('偏财'))) combos.push('伤官生财');
+    if (hasNT('食神') && (hasNT('正财') || hasNT('偏财'))) combos.push('食神生财');
+    if (hasNT('正官') && (hasNT('正财') || hasNT('偏财'))) combos.push('财官相生');
+    if (hasNT('正官') && (hasNT('正印') || hasNT('偏印'))) combos.push('官印相生');
+    if ((hasNT('正印') || hasNT('偏印')) && (has('比肩') || has('劫财'))) combos.push('印比护身');
 
     return { primary, gridName, combos, tianShen: TianShen };
   }
@@ -450,6 +474,13 @@
     const r = BaziRef.chart(opts);
     const currentYear = opts.currentYear || (new Date().getFullYear());
     r.wuxingWeighted = countWuxingWeighted(r.pillars);
+    // 非加权简单计数（每个天干/地支各计1）
+    const wc = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+    ['year', 'month', 'day', 'hour'].forEach(k => {
+      wc[GAN_WUXING[r.pillars[k].gan]] += 1;
+      wc[ZHI_WUXING[r.pillars[k].zhi]] += 1;
+    });
+    r.wuxingCount = wc;
     r.kongwang = dayKongwang(r);
     r.shensha = findShenSha(r);
     r.relations = pillarRelations(r);

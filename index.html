@@ -7,14 +7,56 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- 进场：太极八卦开屏 -->
+  <div id="intro" class="intro" role="dialog" aria-label="天枢开场">
+    <div class="intro-inner">
+      <div class="intro-ring-wrap">
+        <svg class="intro-ring-svg" viewBox="0 0 320 320" aria-hidden="true">
+          <!-- 最外圈光晕 -->
+          <circle cx="160" cy="160" r="156" fill="none" stroke="rgba(232,197,106,.08)" stroke-width="2"/>
+          <circle cx="160" cy="160" r="146" fill="none" stroke="rgba(232,197,106,.05)" stroke-width="1"/>
+          <!-- 八卦爻符号 -->
+          <g transform="translate(160,22)"><rect x="-12" y="0" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.7)"/><rect x="-12" y="6" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.7)"/><rect x="-12" y="12" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.7)"/></g>
+          <g transform="translate(258,62) rotate(45)"><rect x="-10" y="0" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.6)"/><rect x="0" y="0" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.6)"/><rect x="-10" y="6" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.6)"/><rect x="-10" y="12" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.6)"/></g>
+          <g transform="translate(298,160) rotate(90)"><rect x="-10" y="0" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/><rect x="0" y="0" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/><rect x="-10" y="6" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/><rect x="-10" y="12" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/><rect x="0" y="12" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/></g>
+          <g transform="translate(258,258) rotate(135)"><rect x="-10" y="0" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="0" y="0" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="-10" y="6" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="0" y="6" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="-10" y="12" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/></g>
+          <g transform="translate(160,298) rotate(180)"><rect x="-10" y="0" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="0" y="0" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="-10" y="6" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="0" y="6" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="-10" y="12" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/><rect x="0" y="12" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.4)"/></g>
+          <g transform="translate(62,258) rotate(225)"><rect x="-10" y="0" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/><rect x="-10" y="6" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/><rect x="0" y="6" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/><rect x="-10" y="12" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/><rect x="0" y="12" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.5)"/></g>
+          <g transform="translate(22,160) rotate(270)"><rect x="-10" y="0" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.6)"/><rect x="-10" y="6" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.6)"/><rect x="0" y="6" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.6)"/><rect x="-10" y="12" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.6)"/></g>
+          <g transform="translate(62,62) rotate(315)"><rect x="-10" y="0" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.7)"/><rect x="-10" y="6" width="24" height="2.8" rx="1" fill="rgba(232,197,106,.7)"/><rect x="-10" y="12" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.7)"/><rect x="0" y="12" width="10" height="2.8" rx="1" fill="rgba(232,197,106,.7)"/></g>
+        </svg>
+        <!-- 中心太极：白 + 金，确保在深色背景上清晰可见 -->
+        <div class="intro-taiji-box">
+          <svg viewBox="-70 -70 140 140" role="img" aria-label="太极" class="intro-taiji-svg">
+            <circle r="64" fill="#f5e6c8"/>
+            <path d="M0,-64 A64,64 0 0,1 0,64 Z" fill="#dfb95a"/>
+            <circle cx="0" cy="-32" r="32" fill="#dfb95a"/>
+            <circle cx="0" cy="32" r="32" fill="#f5e6c8"/>
+            <circle cx="0" cy="-32" r="8" fill="#f5e6c8"/>
+            <circle cx="0" cy="32" r="8" fill="#dfb95a"/>
+            <circle r="64" fill="none" stroke="rgba(245,230,200,.25)" stroke-width="1.5"/>
+          </svg>
+        </div>
+      </div>
+      <div class="intro-brand">
+        <h1>天枢</h1>
+        <p>知命 · 安身</p>
+      </div>
+      <button type="button" class="intro-skip" id="intro-skip">进入排盘</button>
+    </div>
+  </div>
+
   <div class="shell">
     <header class="masthead">
       <div class="brand">
-        <svg class="taiji" viewBox="0 0 100 100" aria-hidden="true">
-          <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="2"/>
-          <path d="M50,2 A48,48 0 0,1 50,98 A24,24 0 0,1 50,50 A24,24 0 0,0 50,2 Z" fill="currentColor"/>
-          <circle cx="50" cy="26" r="6" fill="var(--paper)"/>
-          <circle cx="50" cy="74" r="6" fill="currentColor"/>
+        <svg class="taiji" viewBox="-52 -52 104 104" aria-hidden="true">
+          <circle r="48" fill="currentColor"/>
+          <path d="M0,-48 A48,48 0 0,1 0,48 Z" fill="var(--paper)"/>
+          <circle cx="0" cy="-24" r="24" fill="currentColor"/>
+          <circle cx="0" cy="24" r="24" fill="var(--paper)"/>
+          <circle cx="0" cy="-24" r="6" fill="var(--paper)"/>
+          <circle cx="0" cy="24" r="6" fill="currentColor"/>
+          <circle r="48" fill="none" stroke="currentColor" stroke-width="1"/>
         </svg>
         <div class="brand-text">
           <h1>天枢</h1>
@@ -56,9 +98,9 @@
             </div>
           </div>
 
-          <div class="field" id="row-leap" hidden>
+          <div class="field leap-row" id="row-leap" hidden>
             <label>闰月</label>
-            <label class="check"><input type="checkbox" id="f-leap"><span>此农历月为闰月（如闰五月）</span></label>
+            <label class="check"><input type="checkbox" id="f-leap"><span>✦ 此农历月为闰月（如闰五月、闰六月等）</span></label>
           </div>
 
           <div class="grid3">
@@ -83,7 +125,7 @@
           </div>
 
           <details class="advanced">
-            <summary>高级 · 真太阳时校正</summary>
+            <summary>高级 · 真太阳时 / 子时规则</summary>
             <div class="grid3">
               <div class="field">
                 <label>出生经度</label>
@@ -97,6 +139,14 @@
                 <label>真太阳时</label>
                 <label class="check"><input type="checkbox" id="f-tst" checked><span>启用校正</span></label>
               </div>
+            </div>
+            <div class="field zi-rule">
+              <label>子时换日</label>
+              <div class="seg" role="radiogroup">
+                <label><input type="radio" name="ziRule" value="next" id="zi-next" checked><span>晚子时 · 23点后用次日</span></label>
+                <label><input type="radio" name="ziRule" value="same" id="zi-same"><span>子时属当日</span></label>
+              </div>
+              <p class="hint">流派分歧：默认「晚子时」；若习惯夜子仍算当日，选「子时属当日」。</p>
             </div>
           </details>
 

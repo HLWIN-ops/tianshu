@@ -195,16 +195,11 @@ const Bazi = (() => {
   }
 
   // ---------- 干支序号 ----------
-  // 参考：1984-02-02 为甲子日（儒略日基准）。
-  // 甲子日的儒略日：JDN(1984,2,2, 0:00 UTC?) 实际使用当地午时不影响“整日”序号。
-  // 取 1984-02-02 12:00 本地，对应干支“甲子”。我们用整数日偏移。
-  // 计算日柱：以 JDN(当地日期 12:00) 的整日数对甲子取模。
+  // 日柱：以儒略日整数推六十甲子。
+  // 标定：2000-01-01 (JDN 2451545) = 戊午(54)；等价 (jdn + 49) % 60。
+  // 注意：旧说「1984-02-02 为甲子」有误，该日实为丙寅(2)。
   function ganzhiIndexFromJDN(jdnInt) {
-    // jdnInt 为“当地正午”对应的整数儒略日
-    // 已知：1984-02-02 -> 甲子(0)。
-    // toJulianDay(1984,2,2,12) = 2445733.0 -> floor+... 我们统一用 Math.floor(jd+0.5)
-    const anchor = Math.floor(toJulianDay(1984, 2, 2, 12) + 0.5); // 2445733
-    let idx = (jdnInt - anchor) % 60;
+    let idx = (jdnInt + 49) % 60;
     if (idx < 0) idx += 60;
     return idx;
   }
@@ -334,6 +329,9 @@ const Bazi = (() => {
    *   longitude: 出生地经度（东经正，默认120）
    *   tz: 时区偏移小时（默认8）
    *   useTrueSolar: 是否使用真太阳时（默认true）
+   *   ziDayRule: 'next' | 'same'
+   *     - 'next'（默认，晚子时）：有效时点 ≥23:00 时，日柱用次日
+   *     - 'same'（子时属当日）：23:00–00:59 子时皆用当日日柱
    */
   function chart(opts) {
     const {
@@ -342,6 +340,7 @@ const Bazi = (() => {
       longitude = 120,
       tz = 8,
       useTrueSolar = true,
+      ziDayRule = 'next',
     } = opts;
 
     const stdMeridian = tz * 15;
@@ -358,6 +357,12 @@ const Bazi = (() => {
       while (total >= 1440) { total -= 1440; dayShift += 1; }
       adjHour = Math.floor(total / 60);
       adjMin = Math.round(total % 60);
+      // 四舍五入可能得到 60 分，进位到下一小时
+      if (adjMin >= 60) {
+        adjMin -= 60;
+        adjHour += 1;
+        if (adjHour >= 24) { adjHour -= 24; dayShift += 1; }
+      }
       solarInfo.dayShift = dayShift;
       solarInfo.adjHour = adjHour;
       solarInfo.adjMin = adjMin;
@@ -418,12 +423,13 @@ const Bazi = (() => {
       const shifted = fromJulianDay(toJulianDay(year, month, day, 12) + solarInfo.dayShift);
       dY = shifted.y; dM = shifted.m; dD = shifted.d;
     }
-    // 子时换日：真太阳时 23:00 后属次日日柱（早子时/晚子时的经典处理——此处采用“晚子时归次日”）
+    // 子时换日规则（见 ziDayRule）
     let dayForPillar = { y: dY, m: dM, d: dD };
     const hourZhiIdx = hourZhiFromMinutes(useTrueSolar ? solarInfo.totalMin : hour * 60 + minute);
-    // 若为子时且钟点>=23，则日柱用次日
     const effHour = adjHour;
-    if (effHour >= 23) {
+    // 晚子时（next，默认）：有效时 ≥23 点则日柱用次日
+    // 子时属当日（same）：23 点仍用当日日柱
+    if (ziDayRule !== 'same' && effHour >= 23) {
       const nx = fromJulianDay(toJulianDay(dY, dM, dD, 12) + 1);
       dayForPillar = { y: nx.y, m: nx.m, d: nx.d };
     }
@@ -455,7 +461,7 @@ const Bazi = (() => {
     }
 
     const result = {
-      input: { year, month, day, hour, minute, gender, longitude, tz, useTrueSolar },
+      input: { year, month, day, hour, minute, gender, longitude, tz, useTrueSolar, ziDayRule },
       solarInfo,
       baziYear,
       pillars: {
@@ -572,7 +578,7 @@ const Bazi = (() => {
     },
     util: {
       toJulianDay, fromJulianDay, solarLongitude, solarTermJd,
-      jiazi, tenGod, trueSolarTime, equationOfTime,
+      jiazi, tenGod, trueSolarTime, equationOfTime, ganzhiIndexFromJDN,
     },
   };
 })();

@@ -39,6 +39,36 @@
     buildShiOptions();
     initTabs();
     initForm();
+    initIntro();
+  }
+
+  /* ===== 进场太极八卦 ===== */
+  function initIntro() {
+    const el = document.getElementById('intro');
+    if (!el) return;
+    // 同会话内只播一次，刷新可再看；localStorage 可选
+    const skipBtn = document.getElementById('intro-skip');
+    let done = false;
+    const hide = () => {
+      if (done) return;
+      done = true;
+      el.classList.add('is-out');
+      setTimeout(() => {
+        el.classList.add('is-gone');
+        el.setAttribute('aria-hidden', 'true');
+      }, 900);
+    };
+    skipBtn && skipBtn.addEventListener('click', hide);
+    el.addEventListener('click', e => {
+      if (e.target === el || e.target.closest('.intro-inner')) {
+        // 点画面也可进入（除了要等动画时）
+        if (e.target === skipBtn) return;
+        if (el.classList.contains('is-ready')) hide();
+      }
+    });
+    // 入场动画结束后允许点击；定时自动隐没
+    setTimeout(() => el.classList.add('is-ready'), 1200);
+    setTimeout(hide, 3200);
   }
 
   function buildShiOptions() {
@@ -107,7 +137,7 @@
     const idx = h === 23 ? 0 : Math.min(11, Math.floor((h + 1) / 2));
     document.getElementById('f-shi').value = String(idx);
     updateShiHint();
-    document.getElementById('f-minute').value = n.getMinutes();
+    // 分钟不再单独输入，时辰选择器已涵盖
   }
 
   function doPai() {
@@ -123,6 +153,7 @@
     const longitude = parseFloat(document.getElementById('f-lon').value);
     const tz = parseInt(document.getElementById('f-tz').value, 10);
     const useTrueSolar = document.getElementById('f-tst').checked;
+    const ziDayRule = (document.querySelector('input[name=ziRule]:checked') || {}).value || 'next';
 
     if (!year || !month || !day) { alert('请填写完整的出生年月日'); return; }
     if (month < 1 || month > 12 || day < 1 || day > 31) { alert('月日填写有误'); return; }
@@ -141,12 +172,13 @@
     try {
       current = P.fullChart({
         year, month, day, hour, minute, gender,
-        longitude, tz, useTrueSolar, name, lunarLabel,
+        longitude, tz, useTrueSolar, ziDayRule, name, lunarLabel,
       });
       current.lunar = P.solarToLunar(year, month, day);
       current.input.name = name;
       current.input.lunarLabel = lunarLabel;
       current.input.shiName = SHICHEN[shiIdx].name;
+      current.input.ziDayRule = ziDayRule;
       go('paipan');
     } catch (e) {
       alert('排盘出错：' + e.message);
@@ -215,6 +247,17 @@
     colDefs.forEach(c => {
       html += `<div class="bt-col bt-nayin">${r.pillars[c.key].nayin}</div>`;
     });
+    // 喜忌（该柱干支五行相对喜用/忌神）
+    const xi = r.useGod.xi, ji = r.useGod.ji;
+    html += `<div class="bt-col bt-rowlabel">喜忌</div>`;
+    colDefs.forEach(c => {
+      const p = r.pillars[c.key];
+      const isXi = xi.includes(p.ganWuxing) || xi.includes(p.zhiWuxing);
+      const isJi = ji.includes(p.ganWuxing) || ji.includes(p.zhiWuxing);
+      const t = isXi ? '<span class="pillar-tag xi">喜</span>'
+        : (isJi ? '<span class="pillar-tag ji">忌</span>' : '<span class="pillar-tag neu">平</span>');
+      html += `<div class="bt-col bt-favor">${t}</div>`;
+    });
     document.getElementById('bazi-table').innerHTML = html;
 
     // 真太阳时
@@ -225,9 +268,12 @@
         `<span>经度差 <b>${s.lonDiff.toFixed(1)}</b> 分</span>` +
         `<span>均时差 <b>${s.eot.toFixed(1)}</b> 分</span>` +
         `<span>校正后约 <b>${pad(s.adjHour)}:${pad(s.adjMin)}</b>${s.dayShift ? `（跨日 ${s.dayShift > 0 ? '+' : ''}${s.dayShift}）` : ''}</span>` +
-        `<span>当月节气 <b>${r.jieInfo.current ? r.jieInfo.current.name : ''}</b></span>`;
+        `<span>当月节气 <b>${r.jieInfo.current ? r.jieInfo.current.name : ''}</b></span>` +
+        `<span>子时 <b>${r.input.ziDayRule === 'same' ? '属当日' : '晚子归次日'}</b></span>`;
     } else {
-      sn.innerHTML = `<span>未启用真太阳时</span><span>当月节气 <b>${r.jieInfo.current ? r.jieInfo.current.name : ''}</b></span>`;
+      sn.innerHTML = `<span>未启用真太阳时</span>` +
+        `<span>当月节气 <b>${r.jieInfo.current ? r.jieInfo.current.name : ''}</b></span>` +
+        `<span>子时 <b>${r.input.ziDayRule === 'same' ? '属当日' : '晚子归次日'}</b></span>`;
     }
 
     document.getElementById('shensha-list').innerHTML = I.renderShenShaInline(r);
@@ -264,23 +310,25 @@
     document.getElementById('dayun-intro').innerHTML =
       `${r.input.gender === 'male' ? '男' : '女'}命 · 大运自月柱 <b>${r.pillars.month.name}</b> ${dy.forward ? '顺' : '逆'}排 · <b>${dy.startAge}</b>岁${dy.startMonths ? dy.startMonths + '个月' : ''}起运`;
     const xi = r.useGod.xi, ji = r.useGod.ji;
+    const dayZhi = r.pillars.day.zhiName;
+    const ctx = { dayZhi, relations: P.relations };
     document.getElementById('dayun-timeline').innerHTML = dy.runs.map((d, i) => {
       const isXi = xi.includes(d.ganWuxing) || xi.includes(d.zhiWuxing);
       const isJi = ji.includes(d.ganWuxing) || ji.includes(d.zhiWuxing);
       const tag = isXi ? '<span class="dun-tag xi">喜</span>' : (isJi ? '<span class="dun-tag ji">忌</span>' : '');
-      const tone = I.genStageReading(d, r.useGod).tone;
-      const gd = I.TEN_GOD_MEANING[d.ganTenGod] || '';
-      const zd = I.TEN_GOD_MEANING[d.zhiTenGod] || '';
+      const rd = I.genStageReading(d, r.useGod, ctx);
+      // 展开只显示运势要点 + 宜做，不粘贴十神词典（词典在解读附录）
       return `<div class="tl-item">
         <div class="tl-node"></div>
         <div class="tl-card" data-dayun="${i}" role="button" tabindex="0">
           <div class="tl-age">${d.startAge}–${d.startAge + 9} 岁 · ${d.startYear}年起</div>
-          <div class="tl-gz"><span class="wx-${d.ganWuxing}">${d.ganName}</span><span class="wx-${d.zhiWuxing}">${d.zhiName}</span>${tag}</div>
+          <div class="tl-gz"><span class="wx-${d.ganWuxing}">${d.ganName}</span><span class="wx-${d.zhiWuxing}">${d.zhiName}</span>${tag}
+            <span class="lv-pill ${rd.levelCls}">${rd.level}</span>
+          </div>
           <div class="tl-shen">${d.ganTenGod} · ${d.zhiTenGod}</div>
           <div class="tl-detail" hidden>
-            <p class="tl-tone">${tone}</p>
-            <p><b>天干${d.ganTenGod}</b>：${gd}</p>
-            <p><b>地支${d.zhiTenGod}</b>：${zd}</p>
+            <p class="tl-tone">${rd.summary}</p>
+            <p><b>宜</b>：${rd.action}${rd.relNote ? ' · ' + rd.relNote : ''}</p>
           </div>
         </div>
       </div>`;
@@ -296,12 +344,23 @@
       card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
     });
 
-    // 流年：点击查看该年详情
+    // 当前所处大运区间（用于流年高亮）
+    const curAge = r._currentYear - r.input.year;
+    let curRun = null;
+    dy.runs.forEach(d => { if (curAge >= d.startAge && curAge < d.startAge + 10) curRun = d; });
+    const inCurRun = (y) => curRun && y >= curRun.startYear && y <= curRun.startYear + 9;
+    if (curRun) {
+      document.getElementById('dayun-intro').innerHTML +=
+        `　·　当前行 <b>${curRun.ganName}${curRun.zhiName}</b> 运（${curRun.startAge}–${curRun.startAge + 9}岁）`;
+    }
+
+    // 流年：点击查看该年详情（短句，不重复主题词典长文）
     document.getElementById('liunian-grid').innerHTML = r.liunian.map((n, i) => {
       const rel = n.relWithDayZhi.length ? `<span class="ln-rel">${n.relWithDayZhi.join('')}日支</span>` : '';
-      const theme = I.TEN_GOD_THEME ? I.TEN_GOD_THEME[n.tenGod] : '';
-      const detail = `${n.year}年 流年 <b>${n.name}</b>（${n.tenGod}）${theme ? '，' + theme : ''}${rel ? '，与日支' + rel : ''}。${wxNoteFor(n, r)}`;
-      return `<div class="ln-cell ${n.isCurrent ? 'current' : ''}" data-liu="${i}" role="button" tabindex="0">
+      const focus = I.TEN_GOD_FOCUS ? I.TEN_GOD_FOCUS[n.tenGod] : '';
+      const detail = `${n.year}年 <b>${n.name}</b> · ${n.tenGod}${focus ? '（' + focus + '）' : ''}${rel ? '，' + n.relWithDayZhi.join('') + '日支' : ''}。${wxNoteFor(n, r)}`;
+      const cls = [n.isCurrent ? 'current' : '', inCurRun(n.year) ? 'in-dayun' : ''].join(' ').trim();
+      return `<div class="ln-cell ${cls}" data-liu="${i}" role="button" tabindex="0">
         <span class="ln-year">${n.year}</span>
         <span class="ln-gz"><i class="wx-${K.GAN_WUXING[K.TIANGAN.indexOf(n.gan)]}">${n.gan}</i><i class="wx-${K.ZHI_WUXING[K.DIZHI.indexOf(n.zhi)]}">${n.zhi}</i></span>
         <span class="ln-shen">${n.tenGod}</span>${rel}
@@ -322,26 +381,31 @@
     const xi = r.useGod.xi, ji = r.useGod.ji;
     const wxG = K.GAN_WUXING[K.TIANGAN.indexOf(n.gan)];
     const wxZ = K.ZHI_WUXING[K.DIZHI.indexOf(n.zhi)];
-    if (xi.includes(wxG) || xi.includes(wxZ)) return '此年干支多利日主之需，宜把握机遇。';
-    if (ji.includes(wxG) || ji.includes(wxZ)) return '此年干支多犯日主所忌，宜谨慎守成。';
-    return '此年平顺，宜稳扎稳打。';
+    if (xi.includes(wxG) || xi.includes(wxZ)) return '利喜用，宜把握。';
+    if (ji.includes(wxG) || ji.includes(wxZ)) return '多犯忌，宜守成。';
+    return '平年，稳扎稳打。';
   }
 
   /* ===== 解读 ===== */
   function renderRead(r) {
     document.getElementById('read-content').innerHTML = `
+      ${I.renderOverviewSection(r)}
       <div class="read-card">
-        <h3>格局与喜用神</h3>
+        <h3>格局与喜用</h3>
         <p>${I.genPatternText(r.pattern)}</p>
         <p>${I.genStrengthText(r.strength)}</p>
         ${I.genUseGodText(r.useGod)}
       </div>
+      ${I.renderTemperamentSection(r)}
+      ${I.renderPillarSection(r)}
       ${I.renderStageSection(r, P)}
       ${I.renderDomainSection(r, P)}
+      ${I.renderLiunianSection(r)}
+      ${I.renderPracticalSection(r)}
       ${I.renderMeaningSection(r, P)}
       <div class="read-card warn">
         <h3>温馨提示</h3>
-        <p>命理乃传统文化之一，所谓“一命二运三风水”，命盘所示为先天格局之倾向，非定数。后天修身、积善、勤勉，皆可改运。本解读由规则推演生成，仅供参考，请理性看待，切勿迷信。</p>
+        <p>命理为传统文化之一，所示为先天倾向，非定数。后天修身、积善、勤勉皆可改运。本解读由规则推演，仅供参考，切勿迷信。</p>
       </div>`;
   }
 

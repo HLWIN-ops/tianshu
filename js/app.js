@@ -5,11 +5,23 @@
 (function () {
   'use strict';
 
-  const P = Bazi.plus;
-  const I = Bazi.interpret;
-  const F = Bazi.figures;
-  const T = Bazi.product;
-  const K = Bazi.constants;
+  const core = typeof Bazi !== 'undefined' ? Bazi : null;
+  const missing = !core ? 'engine.js' : [
+    ['constants', 'engine.js'], ['plus', 'engine-plus.js'], ['product', 'product.js'],
+  ].filter(item => !core[item[0]]).map(item => item[1]).join('、');
+
+  if (!core || missing) {
+    const report = () => showBootError(`缺少必要组件：${missing || 'engine.js'}。请检查静态文件是否完整发布。`);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', report, { once: true });
+    else report();
+    return;
+  }
+
+  const P = core.plus;
+  const I = core.interpret;
+  const F = core.figures;
+  const T = core.product;
+  const K = core.constants;
   let current = null; // fullChart 结果
   let currentFormInput = null;
   let currentAccuracy = null;
@@ -17,6 +29,11 @@
   let funCategory = ''; // 趣味页分类过滤
   let lastFunResult = null; // 最近一次趣味匹配结果（供海报使用）
   let toastTimer = null;
+  let recentProfile = null;
+  let lastModalFocus = null;
+  let pendingShareText = '';
+  const REFLECTION_KEY = 'tianshu.reflections.v1';
+  const REFLECTION_LIMIT = 60;
 
   // 十二时辰：value = 地支序(0子..11亥)，对应真太阳时小时起点见引擎 hourZhiFromMinutes
   const SHICHEN = [
@@ -44,14 +61,37 @@
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
-    initIntro();
-    buildShiOptions();
-    buildProductOptions();
-    initTabs();
-    initForm();
-    initPoster();
-    initResultActions();
-    initArchive();
+    try {
+      initIntro();
+      buildShiOptions();
+      buildProductOptions();
+      initTabs();
+      initForm();
+      initPoster();
+      initSharePreview();
+      initResultActions();
+      initArchive();
+      updateResultAccess(false);
+      renderRecentProfile();
+      document.documentElement.dataset.appReady = 'true';
+    } catch (error) {
+      console.error(error);
+      showBootError(`初始化失败：${error && error.message ? error.message : '未知错误'}`);
+    }
+  }
+
+  function showBootError(message) {
+    const reveal = () => {
+      const intro = document.getElementById('intro');
+      if (intro) intro.classList.add('is-gone');
+      const panel = document.getElementById('boot-error');
+      if (!panel) return;
+      const detail = document.getElementById('boot-error-message');
+      if (detail) detail.textContent = message;
+      panel.hidden = false;
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', reveal, { once: true });
+    else reveal();
   }
 
   /* ===== 进场太极八卦 ===== */
@@ -59,9 +99,11 @@
     const el = document.getElementById('intro');
     if (!el) return;
     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const preview = new URLSearchParams(window.location.search).get('intro') === '1';
     let seen = false;
     try { seen = localStorage.getItem('tianshu.intro.seen') === '1'; } catch (_) {}
-    if (seen || reduced) {
+    // 普通访问直接进入核心任务；品牌开屏仅作为显式预览，不再拦住首次排盘。
+    if (!preview || seen || reduced) {
       el.classList.add('is-gone');
       el.setAttribute('aria-hidden', 'true');
       return;
@@ -88,9 +130,9 @@
         if (el.classList.contains('is-ready')) hide();
       }
     });
-    // 入场动画结束后允许点击；定时自动隐没
-    setTimeout(() => el.classList.add('is-ready'), 300);
-    setTimeout(hide, 1600);
+    // 按钮立即可用；若用户未操作，开屏也会自动退出。
+    requestAnimationFrame(() => el.classList.add('is-ready'));
+    setTimeout(hide, 4000);
   }
 
   function buildShiOptions() {
@@ -133,25 +175,66 @@
 
   /* ===== 导航 ===== */
   function initTabs() {
-    document.querySelectorAll('.tab').forEach(b =>
-      b.addEventListener('click', () => go(b.dataset.page)));
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    tabs.forEach((button, index) => {
+      button.id = `tab-${button.dataset.page}`;
+      button.tabIndex = index === 0 ? 0 : -1;
+      const panel = document.getElementById(button.getAttribute('aria-controls'));
+      if (panel) {
+        panel.setAttribute('role', 'tabpanel');
+        panel.setAttribute('aria-labelledby', button.id);
+      }
+      button.addEventListener('click', () => go(button.dataset.page));
+      button.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const enabled = tabs.filter(tab => !tab.disabled);
+        const currentIndex = enabled.indexOf(button);
+        let next = currentIndex;
+        if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = enabled.length - 1;
+        else if (event.key === 'ArrowRight') next = (currentIndex + 1) % enabled.length;
+        else next = (currentIndex - 1 + enabled.length) % enabled.length;
+        enabled[next].focus();
+        go(enabled[next].dataset.page, { focusTab: true });
+      });
+    });
     document.querySelectorAll('[data-goto]').forEach(b =>
       b.addEventListener('click', () => go(b.dataset.goto)));
   }
-  function go(page) {
+  function updateResultAccess(ready) {
+    ['paipan', 'dayun', 'read', 'fun'].forEach(page => {
+      const tab = document.querySelector(`.tab[data-page="${page}"]`);
+      if (!tab) return;
+      const moduleReady = !((page === 'dayun' || page === 'read') && !I) && !(page === 'fun' && !F);
+      tab.disabled = !ready || !moduleReady;
+      tab.setAttribute('aria-disabled', String(tab.disabled));
+      tab.title = !ready ? '完成排盘后开放' : (!moduleReady ? '该静态组件未成功加载' : '');
+    });
+  }
+  function go(page, options = {}) {
     if ((page === 'paipan' || page === 'dayun' || page === 'read' || page === 'fun') && !current) {
-      alert('请先填写生辰并排盘'); return;
+      toast('完成排盘后即可查看');
+      go('input');
+      const first = document.getElementById('f-year');
+      if (first) first.focus();
+      return;
+    }
+    if (((page === 'dayun' || page === 'read') && !I) || (page === 'fun' && !F)) {
+      toast('该模块未成功加载，核心命盘仍可继续使用');
+      return;
     }
     document.querySelectorAll('.tab').forEach(t => {
       const active = t.dataset.page === page;
       t.classList.toggle('active', active);
       t.setAttribute('aria-selected', String(active));
+      t.tabIndex = active ? 0 : -1;
     });
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const target = document.getElementById('page-' + page);
     if (!target) return;
     target.classList.add('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: options.instant ? 'auto' : 'smooth' });
     if (page === 'paipan') renderPaipan(current);
     if (page === 'dayun') renderDayun(current);
     if (page === 'read') renderRead(current);
@@ -172,6 +255,10 @@
     document.getElementById('f-time').addEventListener('change', updateExactTimeHint);
     document.getElementById('f-city').addEventListener('change', applyCity);
     document.getElementById('f-lon').addEventListener('input', markCityCustom);
+    document.querySelectorAll('#form input, #form select').forEach(control => {
+      control.addEventListener('input', () => clearFieldError(control));
+      control.addEventListener('change', () => clearFieldError(control));
+    });
 
     document.getElementById('form').addEventListener('submit', e => {
       e.preventDefault();
@@ -252,6 +339,7 @@
   }
 
   function doPai() {
+    clearFieldErrors();
     const name = document.getElementById('f-name').value.trim();
     const gender = document.querySelector('input[name=gender]:checked').value;
     const isLunar = document.getElementById('cal-lunar').checked;
@@ -273,16 +361,20 @@
     const focus = document.getElementById('f-focus').value;
 
     if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
-      showStatus('请填写完整的出生年月日。', 'error'); return;
+      const target = !Number.isInteger(year) ? 'f-year' : (!Number.isInteger(month) ? 'f-month' : 'f-day');
+      fieldError(target, '请填写完整的出生年月日。'); return false;
     }
     if (!isLunar && !T.isValidSolarDate(year, month, day)) {
-      showStatus('这个公历日期不存在，请检查年月日。', 'error'); return;
+      fieldError('f-day', '这个公历日期不存在，请检查年月日。'); return false;
     }
     if (timePrecision === 'exact' && !exactTime) {
-      showStatus('请选择准确的出生时间。', 'error'); return;
+      fieldError('f-time', '请选择准确的出生时间。'); return false;
     }
     if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180 || !Number.isFinite(tz) || tz < -12 || tz > 14) {
-      showStatus('请检查经度和时区设置。', 'error'); return;
+      const target = !Number.isFinite(longitude) || longitude < -180 || longitude > 180 ? 'f-lon' : 'f-tz';
+      const advanced = document.getElementById(target).closest('details');
+      if (advanced) advanced.open = true;
+      fieldError(target, '请检查经度和时区设置。'); return false;
     }
 
     currentFormInput = {
@@ -294,9 +386,13 @@
     let lunarLabel = '';
     if (isLunar) {
       const solar = P.lunarToSolar(year, month, day, isLeap);
-      if (!solar) { showStatus('该农历日期不存在，可能无此闰月或超出支持范围。', 'error'); return; }
+      if (!solar) { fieldError('f-day', '该农历日期不存在，可能无此闰月或超出支持范围。'); return false; }
       lunarLabel = `农历 ${year}年${isLeap ? '闰' : ''}${month}月${day}日`;
       year = solar.y; month = solar.m; day = solar.d;
+    }
+    const today = new Date();
+    if (Date.UTC(year, month - 1, day) > Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) {
+      fieldError('f-year', '出生日期不能晚于今天。'); return false;
     }
 
     try {
@@ -314,12 +410,50 @@
       current._formInput = currentFormInput;
       currentAccuracy = T.buildAccuracy(current, { timePrecision, cityConfirmed: Boolean(cityId), useTrueSolar });
       currentInsights = T.buildInsights(current, focus);
+      updateResultAccess(true);
       showStatus('排盘完成。', 'ok');
       go('paipan');
+      return true;
     } catch (e) {
       showStatus('排盘出错：' + e.message, 'error');
       console.error(e);
+      return false;
     }
+  }
+
+  function clearFieldError(control) {
+    if (!control) return;
+    control.removeAttribute('aria-invalid');
+    const field = control.closest('.field');
+    if (!field) return;
+    field.classList.remove('has-error');
+    const message = field.querySelector('.field-error');
+    if (message) {
+      if (control.getAttribute('aria-describedby') === message.id) control.removeAttribute('aria-describedby');
+      message.remove();
+    }
+  }
+
+  function clearFieldErrors() {
+    document.querySelectorAll('#form [aria-invalid="true"]').forEach(clearFieldError);
+  }
+
+  function fieldError(id, message) {
+    const control = document.getElementById(id);
+    showStatus(message, 'error');
+    if (!control) return;
+    const field = control.closest('.field');
+    control.setAttribute('aria-invalid', 'true');
+    if (field) {
+      field.classList.add('has-error');
+      const error = document.createElement('p');
+      error.className = 'field-error';
+      error.id = `${id}-error`;
+      error.textContent = message;
+      field.appendChild(error);
+      control.setAttribute('aria-describedby', error.id);
+    }
+    control.focus();
   }
 
   function showStatus(message, type) {
@@ -337,6 +471,7 @@
     const lunarStr = lunar ? `农历 ${lunar.yearGanZhi}年${lunar.isLeap ? '闰' : ''}${lunar.month}月${lunar.day}日 · 属${lunar.animal}` : '';
     renderInsightOverview(r);
     renderAccuracy(r);
+    renderReflection();
     document.getElementById('idcard').innerHTML =
       `<span class="id-name">${nameText}</span>` +
       `<span class="id-tag">${genderText}</span>` +
@@ -462,9 +597,18 @@
         <div class="insight-run">${run}</div>
       </div>
       <div class="insight-evidence">${view.evidence.map(item => `<span>${item}</span>`).join('')}</div>
-      <div class="action-grid">${view.actions.map(item => `
-        <article class="action-card"><b>${item.label}</b><p>${item.text}</p><details><summary>查看依据</summary><small>${item.evidence}</small></details></article>`).join('')}
-      </div>
+      <article class="action-card action-primary">
+        <span class="action-primary-kicker">未来 7 天 · 只做这一件事</span>
+        <p>${view.actions[0].text}</p>
+        <details class="action-rationale">
+          <summary>查看依据、边界与验证方法</summary>
+          <dl>
+            <div><dt>为什么</dt><dd>${view.actions[0].evidence}</dd></div>
+            <div><dt>${view.actions[1].label}</dt><dd>${view.actions[1].text}<small>${view.actions[1].evidence}</small></dd></div>
+            <div><dt>${view.actions[2].label}</dt><dd>${view.actions[2].text}<small>${view.actions[2].evidence}</small></dd></div>
+          </dl>
+        </details>
+      </article>
       <p class="insight-disclaimer">${view.disclaimer}</p>`;
   }
 
@@ -481,12 +625,12 @@
       : `使用钟表时间 ${clock}`;
     document.getElementById('accuracy-strip').innerHTML = `
       <div class="accuracy-head">
-        <div><span class="accuracy-dot ${a.gradeClass}"></span><b>排盘可信度：${a.grade}</b><small>${a.precisionLabel}</small></div>
+        <div><span class="accuracy-dot ${a.gradeClass}"></span><b>柱位稳定度：${a.grade}</b><small>${a.precisionLabel}</small></div>
         <span class="local-badge">本机计算 · v${a.version}</span>
       </div>
       <p>${correction}</p>
       <details class="accuracy-detail">
-        <summary>查看排盘依据与边界提醒</summary>
+        <summary>查看时间依据与不确定性</summary>
         <div class="accuracy-grid">
           <span><b>出生地</b>${currentFormInput && currentFormInput.cityName ? currentFormInput.cityName : '未确认'} · ${r.input.longitude}°</span>
           <span><b>时区</b>UTC${r.input.tz >= 0 ? '+' : ''}${r.input.tz}</span>
@@ -606,18 +750,141 @@
       </div>`;
     const toolbar = document.getElementById('read-toolbar');
     const cards = Array.from(document.querySelectorAll('#read-content .read-card'));
-    cards.forEach((card, index) => { card.id = `read-section-${index}`; });
-    toolbar.innerHTML = cards.map((card, index) =>
-      `<button type="button" data-read-target="read-section-${index}">${card.querySelector('h3') ? card.querySelector('h3').textContent.trim() : '章节'}</button>`).join('');
+    const sections = cards.map((card, index) => enhanceReadCard(card, index));
+    toolbar.innerHTML = sections.map(section =>
+      `<button type="button" data-read-target="${section.id}" aria-controls="${section.id}">${T.escapeHtml(section.title)}</button>`).join('');
     toolbar.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
-      document.getElementById(button.dataset.readTarget).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const card = document.getElementById(button.dataset.readTarget);
+      const toggle = card && card.querySelector('.read-card-toggle');
+      if (toggle && toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));
+  }
+
+  function enhanceReadCard(card, index) {
+    const heading = card.querySelector(':scope > h3') || card.querySelector('h3');
+    const title = heading ? heading.textContent.trim() : `章节 ${index + 1}`;
+    const id = `read-section-${index}`;
+    const bodyId = `${id}-body`;
+    card.id = id;
+    if (!heading) return { id, title };
+
+    const body = document.createElement('div');
+    body.className = 'read-card-body';
+    body.id = bodyId;
+    while (heading.nextSibling) body.appendChild(heading.nextSibling);
+    card.appendChild(body);
+
+    const expanded = index < 2;
+    body.hidden = !expanded;
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'read-card-toggle';
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.setAttribute('aria-controls', bodyId);
+    toggle.innerHTML = `<span>${T.escapeHtml(title)}</span><small>${expanded ? '收起' : '展开'}</small>`;
+    heading.textContent = '';
+    heading.appendChild(toggle);
+    toggle.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!open));
+      toggle.querySelector('small').textContent = open ? '展开' : '收起';
+      body.hidden = open;
+    });
+    return { id, title };
   }
 
   function initResultActions() {
     document.getElementById('btn-save-current').addEventListener('click', saveCurrentProfile);
     document.getElementById('btn-share-summary').addEventListener('click', shareSummary);
     document.getElementById('btn-print').addEventListener('click', () => window.print());
+    document.getElementById('btn-save-reflection').addEventListener('click', saveReflection);
+    document.getElementById('btn-clear-reflection').addEventListener('click', clearReflection);
+  }
+
+  function reflectionMonth(date = new Date()) {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+  }
+
+  function savedCurrentProfile() {
+    if (!currentFormInput) return null;
+    const signature = T.profileSignature(currentFormInput);
+    return T.readProfiles(localStorage).find(profile => profile.signature === signature) || null;
+  }
+
+  function reflectionId(profile) {
+    return profile ? `${profile.id}|${reflectionMonth()}` : '';
+  }
+
+  function readReflections() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(REFLECTION_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed.filter(validReflection).slice(0, REFLECTION_LIMIT) : [];
+    } catch (_) { return []; }
+  }
+
+  function validReflection(item) {
+    return Boolean(item && typeof item.id === 'string' && item.id.length <= 120
+      && typeof item.profileId === 'string' && /^p_[a-zA-Z0-9_]+$/.test(item.profileId)
+      && item.id === `${item.profileId}|${item.month}`
+      && /^\d{4}-\d{2}$/.test(item.month || '')
+      && typeof item.action === 'string' && item.action.trim().length > 0 && item.action.length <= 160
+      && typeof item.evidence === 'string' && item.evidence.length <= 400
+      && ['planned', 'doing', 'done', 'adjusted'].includes(item.status)
+      && typeof item.updatedAt === 'string' && Number.isFinite(Date.parse(item.updatedAt)));
+  }
+
+  function writeReflections(records) {
+    try {
+      localStorage.setItem(REFLECTION_KEY, JSON.stringify(records.filter(validReflection).slice(0, REFLECTION_LIMIT)));
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function renderReflection() {
+    const action = document.getElementById('reflection-action');
+    if (!action || !currentFormInput) return;
+    const profile = savedCurrentProfile();
+    const record = profile ? readReflections().find(item => item.id === reflectionId(profile)) : null;
+    action.value = record ? record.action : '';
+    action.placeholder = currentInsights && currentInsights.actions[0]
+      ? currentInsights.actions[0].text : '从上方建议中挑一个最小行动';
+    document.getElementById('reflection-status').value = record ? record.status : 'planned';
+    document.getElementById('reflection-evidence').value = record ? record.evidence : '';
+    const [year, month] = reflectionMonth().split('-');
+    document.getElementById('reflection-month').textContent = record
+      ? `${year} 年 ${Number(month)} 月 · 已于 ${new Date(record.updatedAt).toLocaleDateString('zh-CN')} 保存`
+      : `${year} 年 ${Number(month)} 月 · 尚未保存`;
+  }
+
+  function saveReflection() {
+    if (!currentFormInput) { toast('请先完成排盘'); return; }
+    const action = document.getElementById('reflection-action').value.trim();
+    const evidence = document.getElementById('reflection-evidence').value.trim();
+    const status = document.getElementById('reflection-status').value;
+    if (!action) { document.getElementById('reflection-action').focus(); toast('先写下一件准备验证的小事'); return; }
+    const existingProfile = savedCurrentProfile();
+    const profile = existingProfile || T.saveProfile(localStorage, currentFormInput, currentFormInput.name || '未署名命主');
+    if (!profile) { toast('保存失败，请检查浏览器存储权限'); return; }
+    const record = { id: reflectionId(profile), profileId: profile.id, month: reflectionMonth(), action: action.slice(0, 160), evidence: evidence.slice(0, 400), status, updatedAt: new Date().toISOString() };
+    const records = readReflections();
+    const next = [record, ...records.filter(item => item.id !== record.id)];
+    if (!writeReflections(next)) { toast('保存失败，请检查浏览器存储权限'); return; }
+    if (!existingProfile) { renderRecentProfile(); }
+    renderReflection();
+    toast(existingProfile ? '本月记录已保存在当前浏览器' : '已建立本机档案并保存本月记录');
+  }
+
+  function clearReflection() {
+    if (!currentFormInput) return;
+    const profile = savedCurrentProfile();
+    if (!profile) { renderReflection(); return; }
+    const records = readReflections();
+    if (!records.some(item => item.id === reflectionId(profile))) { renderReflection(); return; }
+    if (!confirm('清除这张命盘的本月行动记录？')) return;
+    writeReflections(records.filter(item => item.id !== reflectionId(profile)));
+    renderReflection();
+    toast('本月记录已清除');
   }
 
   function saveCurrentProfile() {
@@ -626,18 +893,68 @@
     if (!saved) { toast('保存失败，请检查浏览器存储权限'); return; }
     toast('已保存到本地档案');
     renderProfiles();
+    renderRecentProfile();
   }
 
-  async function shareSummary() {
+  function shareSummary() {
     if (!current) { toast('请先完成排盘'); return; }
-    const text = T.shareText(current, currentInsights);
+    pendingShareText = T.shareText(current, currentInsights, window.location.href);
+    const modal = document.getElementById('share-modal');
+    document.getElementById('share-preview-text').textContent = pendingShareText;
+    const confirmButton = document.getElementById('btn-share-confirm');
+    confirmButton.textContent = navigator.share ? '确认并分享' : '复制并关闭';
+    lastModalFocus = document.activeElement;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    modal.querySelector('.share-panel').focus();
+  }
+
+  function initSharePreview() {
+    const modal = document.getElementById('share-modal');
+    if (!modal) return;
+    modal.querySelectorAll('[data-share-close]').forEach(element => element.addEventListener('click', closeSharePreview));
+    document.getElementById('btn-share-confirm').addEventListener('click', deliverShareSummary);
+    document.getElementById('btn-share-copy').addEventListener('click', async () => {
+      await copyShareText();
+      closeSharePreview();
+    });
+    document.addEventListener('keydown', event => {
+      if (modal.hidden) return;
+      if (event.key === 'Escape') { event.preventDefault(); closeSharePreview(); return; }
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(modal.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) return;
+      const panel = modal.querySelector('.share-panel');
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === panel)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+  }
+
+  async function deliverShareSummary() {
     try {
-      if (navigator.share) await navigator.share({ title: '天枢 · 命盘速览', text });
-      else if (navigator.clipboard) { await navigator.clipboard.writeText(text); toast('摘要已复制'); }
-      else fallbackCopy(text);
+      if (navigator.share) await navigator.share({ title: '天枢 · 命盘速览', text: pendingShareText });
+      else await copyShareText();
+      closeSharePreview();
     } catch (e) {
-      if (e && e.name !== 'AbortError') { fallbackCopy(text); toast('摘要已复制'); }
+      if (e && e.name !== 'AbortError') { await copyShareText(); closeSharePreview(); }
     }
+  }
+
+  async function copyShareText() {
+    if (navigator.clipboard) {
+      try { await navigator.clipboard.writeText(pendingShareText); toast('脱敏摘要已复制'); return; } catch (_) {}
+    }
+    fallbackCopy(pendingShareText);
+    toast('脱敏摘要已复制');
+  }
+
+  function closeSharePreview() {
+    const modal = document.getElementById('share-modal');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    if (lastModalFocus && typeof lastModalFocus.focus === 'function') lastModalFocus.focus();
   }
 
   function fallbackCopy(text) {
@@ -657,10 +974,28 @@
   function initArchive() {
     document.getElementById('btn-export-profiles').addEventListener('click', exportProfiles);
     document.getElementById('f-import-profiles').addEventListener('change', importProfiles);
+    document.getElementById('btn-resume-profile').addEventListener('click', () => {
+      if (!recentProfile) return;
+      applyFormInput(recentProfile.input);
+      doPai();
+    });
     document.getElementById('btn-clear-profiles').addEventListener('click', () => {
       if (!confirm('确认清空当前浏览器中的全部命盘档案？')) return;
-      T.clearProfiles(localStorage); renderProfiles(); toast('档案已清空');
+      T.clearProfiles(localStorage);
+      try { localStorage.removeItem(REFLECTION_KEY); } catch (_) {}
+      renderProfiles(); renderRecentProfile(); toast('档案与行动记录已清空');
     });
+  }
+
+  function renderRecentProfile() {
+    const panel = document.getElementById('recent-resume');
+    if (!panel) return;
+    recentProfile = T.readProfiles(localStorage)[0] || null;
+    panel.hidden = !recentProfile;
+    if (!recentProfile) return;
+    const input = recentProfile.input;
+    const meta = document.getElementById('recent-resume-meta');
+    meta.textContent = `${recentProfile.label || '未署名命主'} · ${input.year}-${pad(input.month)}-${pad(input.day)} · ${input.cityName || '地点未确认'}`;
   }
 
   function renderProfiles() {
@@ -690,7 +1025,9 @@
       card.querySelector('[data-action=edit]').addEventListener('click', () => { applyFormInput(profile.input); go('input'); toast('已载入，可修改后重新排盘'); });
       card.querySelector('[data-action=delete]').addEventListener('click', () => {
         if (!confirm(`删除“${profile.label}”的本地档案？`)) return;
-        T.removeProfile(localStorage, profile.id); renderProfiles();
+        T.removeProfile(localStorage, profile.id);
+        writeReflections(readReflections().filter(item => item.profileId !== profile.id));
+        renderProfiles(); renderRecentProfile();
       });
     });
   }
@@ -719,7 +1056,9 @@
   function exportProfiles() {
     const profiles = T.readProfiles(localStorage);
     if (!profiles.length) { toast('暂无可导出的档案'); return; }
-    const blob = new Blob([JSON.stringify({ app: '天枢', version: T.VERSION, exportedAt: new Date().toISOString(), profiles }, null, 2)], { type: 'application/json' });
+    const profileIds = new Set(profiles.map(profile => profile.id));
+    const reflections = readReflections().filter(record => profileIds.has(record.profileId));
+    const blob = new Blob([JSON.stringify({ app: '天枢', schemaVersion: 1, version: T.VERSION, exportedAt: new Date().toISOString(), profiles, reflections }, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `天枢命盘档案_${new Date().toISOString().slice(0, 10)}.json`;
@@ -730,17 +1069,54 @@
     const file = event.target.files && event.target.files[0];
     event.target.value = '';
     if (!file) return;
+    let previousProfiles = null;
+    let previousReflections = null;
+    let storageChanged = false;
     try {
+      previousProfiles = localStorage.getItem(T.PROFILE_KEY);
+      previousReflections = localStorage.getItem(REFLECTION_KEY);
+      const allowedType = !file.type || file.type === 'application/json' || file.type === 'text/json' || file.type === 'text/plain';
+      if (!allowedType || !/\.json$/i.test(file.name || '')) throw new Error('请选择 JSON 档案文件');
+      if (file.size > 256 * 1024) throw new Error('文件超过 256 KB，已拒绝读取');
       const data = JSON.parse(await file.text());
+      if (!Array.isArray(data)) {
+        if (!data || data.app !== '天枢') throw new Error('这不是天枢导出的档案');
+        // 兼容此前没有 schemaVersion 的官方导出，同时拒绝未知的新结构。
+        if (data.schemaVersion != null && data.schemaVersion !== 1) throw new Error('档案结构版本不受支持');
+        const major = Number(String(data.version || '').split('.')[0]);
+        if (!Number.isInteger(major) || major > Number(String(T.VERSION).split('.')[0])) throw new Error('档案来自更高版本，请先更新天枢');
+      }
       const list = Array.isArray(data) ? data : data.profiles;
       if (!Array.isArray(list)) throw new Error('文件中没有档案列表');
-      let count = 0;
-      list.slice(0, 30).forEach(item => {
-        const input = item && item.input ? item.input : item;
-        if (T.validProfileInput(input) && T.saveProfile(localStorage, input, item.label)) count++;
+      if (!list.length) throw new Error('档案列表为空');
+      const candidates = list.slice(0, 30);
+      const imported = T.importProfilesAtomic(localStorage, candidates);
+      storageChanged = true;
+      const count = imported.profiles.length;
+      const profileIdMap = new Map();
+      candidates.forEach((item, index) => {
+        if (item && typeof item.id === 'string' && imported.profiles[index]) profileIdMap.set(item.id, imported.profiles[index].id);
       });
-      renderProfiles(); toast(`已导入 ${count} 份有效档案`);
-    } catch (e) { toast('导入失败：' + e.message); }
+      const importedReflections = Array.isArray(data && data.reflections) ? data.reflections.map(item => {
+        const mappedId = item && profileIdMap.get(item.profileId);
+        return mappedId ? Object.assign({}, item, { profileId: mappedId, id: `${mappedId}|${item.month}` }) : null;
+      }).filter(validReflection).slice(0, REFLECTION_LIMIT) : [];
+      if (importedReflections.length) {
+        const existing = readReflections();
+        const importedIds = new Set(importedReflections.map(item => item.id));
+        if (!writeReflections(importedReflections.concat(existing.filter(item => !importedIds.has(item.id))))) throw new Error('行动记录写入失败');
+      }
+      renderProfiles(); renderRecentProfile();
+      toast(`已导入 ${count} 份档案${importedReflections.length ? `、${importedReflections.length} 条行动记录` : ''}${list.length > 30 ? '（最多保留 30 份）' : ''}`);
+    } catch (e) {
+      if (storageChanged) {
+        try {
+          if (previousProfiles == null) localStorage.removeItem(T.PROFILE_KEY); else localStorage.setItem(T.PROFILE_KEY, previousProfiles);
+          if (previousReflections == null) localStorage.removeItem(REFLECTION_KEY); else localStorage.setItem(REFLECTION_KEY, previousReflections);
+        } catch (_) {}
+      }
+      toast('导入失败：' + e.message);
+    }
   }
 
   /* ===== 趣味 · 古今人物相似度 ===== */
@@ -849,10 +1225,18 @@
     document.getElementById('btn-poster-save').addEventListener('click', savePoster);
     document.getElementById('btn-poster-copy').addEventListener('click', copyPoster);
     modal.querySelectorAll('[data-close]').forEach(el => {
-      el.addEventListener('click', () => { modal.hidden = true; });
+      el.addEventListener('click', closePoster);
     });
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !modal.hidden) modal.hidden = true;
+      if (modal.hidden) return;
+      if (e.key === 'Escape') { e.preventDefault(); closePoster(); return; }
+      if (e.key !== 'Tab') return;
+      const focusable = Array.from(modal.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      const panel = modal.querySelector('.poster-panel');
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === panel)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
   }
 
@@ -862,13 +1246,25 @@
       return;
     }
     drawPoster(current, lastFunResult);
-    document.getElementById('poster-modal').hidden = false;
+    const modal = document.getElementById('poster-modal');
+    lastModalFocus = document.activeElement;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    const panel = modal.querySelector('.poster-panel');
+    if (panel) panel.focus();
+  }
+
+  function closePoster() {
+    const modal = document.getElementById('poster-modal');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    if (lastModalFocus && typeof lastModalFocus.focus === 'function') lastModalFocus.focus();
   }
 
   function posterFileName() {
-    const name = (current && current.input && current.input.name) || '命主';
     const top = lastFunResult && lastFunResult.matches[0] ? lastFunResult.matches[0].name : '像谁';
-    return `天枢_${name}_像${top}.png`;
+    return `天枢_我最像${top}.png`;
   }
 
   function savePoster() {
@@ -911,9 +1307,10 @@
     canvas.height = H;
     const ctx = canvas.getContext('2d');
     const us = fun.userSummary;
-    const top = fun.matches.slice(0, 5);
-    const userName = (r.input && r.input.name) || '命主';
-    const genderText = r.input.gender === 'male' ? '乾造' : '坤造';
+    const top = fun.matches.slice(0, 4);
+    const shareUrl = T.shareUrl ? T.shareUrl(window.location.href) : '';
+    let siteLabel = '天枢 · 本地隐私排盘';
+    try { if (shareUrl) siteLabel = new URL(shareUrl).host; } catch (_) {}
 
     // 配色
     const paper = '#f7f2e7';
@@ -959,38 +1356,22 @@
     // 分隔线
     drawOrnamentLine(ctx, 90, 148, W - 90, gold);
 
-    // 用户卡片
+    // 用户卡片：默认脱敏，不写姓名、出生日期、地点或完整四柱。
     roundRect(ctx, 70, 168, W - 140, 168, 12, paper2, line);
     ctx.fillStyle = gold;
     ctx.font = '700 16px "Noto Sans SC","Microsoft YaHei",sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('YOUR BAZI · 你的命盘', 92, 198);
+    ctx.fillText('PRIVATE SUMMARY · 脱敏摘要', 92, 198);
 
     ctx.fillStyle = verm;
     ctx.font = '700 30px "STKaiti","KaiTi",serif';
-    ctx.fillText(userName + ' · ' + genderText, 92, 240);
-
-    // 四柱
-    const pillars = us.pillars;
-    const pArr = [pillars.year, pillars.month, pillars.day, pillars.hour];
-    const pLabels = ['年', '月', '日', '时'];
-    ctx.font = '700 28px "STKaiti","KaiTi",serif';
-    pArr.forEach((p, i) => {
-      const x = 92 + i * 130;
-      ctx.fillStyle = ink2;
-      ctx.font = '14px "Noto Sans SC","Microsoft YaHei",sans-serif';
-      ctx.fillText(pLabels[i], x, 272);
-      ctx.fillStyle = i === 2 ? verm : ink;
-      ctx.font = '700 30px "STKaiti","KaiTi",serif';
-      ctx.fillText(p, x, 308);
-    });
-
-    // 日主摘要
+    ctx.fillText(`日主 ${us.dayMaster}${us.dayWx}`, 92, 244);
+    ctx.fillStyle = ink;
+    ctx.font = '700 25px "STKaiti","KaiTi",serif';
+    ctx.fillText(`${us.pattern || '格局待定'} · ${us.strength || '强弱待定'}`, 92, 286);
     ctx.fillStyle = ink2;
-    ctx.font = '16px "Noto Sans SC","Microsoft YaHei",sans-serif';
-    ctx.textAlign = 'right';
-    const meta = `日主 ${us.dayMaster}${us.dayWx} · ${us.pattern || ''} · ${us.strength}`;
-    ctx.fillText(meta, W - 92, 198);
+    ctx.font = '15px "Noto Sans SC","Microsoft YaHei",sans-serif';
+    ctx.fillText('不含姓名、出生日期、时间、地点与完整四柱', 92, 316);
 
     // 最像 TA
     const best = top[0];
@@ -1049,12 +1430,12 @@
     });
 
     // Top 榜
-    const listTop = 900;
+    const listTop = 850;
     drawOrnamentLine(ctx, 90, listTop - 24, W - 90, gold);
     ctx.textAlign = 'center';
     ctx.fillStyle = verm;
     ctx.font = '700 22px "STKaiti","KaiTi",serif';
-    ctx.fillText('相似榜 · TOP ' + Math.min(5, top.length), W / 2, listTop);
+    ctx.fillText('相似榜 · TOP ' + Math.min(4, top.length), W / 2, listTop);
 
     top.forEach((m, i) => {
       const rowY = listTop + 28 + i * 48;
@@ -1082,13 +1463,53 @@
       ctx.fillText(String(m.score), W - 90, rowY + 4);
     });
 
-    // 页脚
-    ctx.textAlign = 'center';
+    // 页脚：运行时地址 + 可扫描二维码，形成图片回流闭环。
+    if (shareUrl) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = verm;
+      ctx.font = '700 14px "Noto Sans SC","Microsoft YaHei",sans-serif';
+      ctx.fillText('扫码测同款', W - 110, H - 238);
+      drawQrCode(ctx, shareUrl, W - 190, H - 225, 160);
+    }
+    const shortSite = siteLabel.length > 34 ? siteLabel.slice(0, 33) + '…' : siteLabel;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = verm;
+    ctx.font = '700 18px "Noto Sans SC","Microsoft YaHei",sans-serif';
+    ctx.fillText('测同款 · 天枢隐私排盘', 86, H - 118);
     ctx.fillStyle = ink2;
     ctx.font = '14px "Noto Sans SC","Microsoft YaHei",sans-serif';
-    ctx.fillText('知命 · 安身  |  天枢八字 · 趣味对照', W / 2, H - 70);
+    ctx.fillText(shortSite, 86, H - 88);
+    ctx.textAlign = 'left';
     ctx.font = '12px "Noto Sans SC","Microsoft YaHei",sans-serif';
-    ctx.fillText('人物生辰多为通行说法，相似度属启发式打分，仅供娱乐', W / 2, H - 48);
+    ctx.fillText('人物生辰多为通行说法，相似度属启发式打分，仅供娱乐', 86, H - 36);
+  }
+
+  /* 固定 Version 8-L 的离线 QR 编码器：足够容纳 Pages 运行时 URL，不发送任何网络请求。 */
+  function drawQrCode(ctx, text, x, y, boxSize) {
+    let matrix;
+    try { matrix = buildQrMatrix(text); } catch (_) { return false; }
+    const quiet = 4;
+    const count = matrix.length + quiet * 2;
+    const scale = Math.max(1, Math.floor(boxSize / count));
+    const size = count * scale;
+    const left = Math.round(x + (boxSize - size) / 2);
+    const top = Math.round(y + (boxSize - size) / 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(left, top, size, size);
+    ctx.fillStyle = '#1f1c19';
+    matrix.forEach((row, rowIndex) => row.forEach((dark, columnIndex) => {
+      if (dark) ctx.fillRect(left + (columnIndex + quiet) * scale, top + (rowIndex + quiet) * scale, scale, scale);
+    }));
+    return true;
+  }
+
+  function buildQrMatrix(value) {
+    const QR = globalThis.TianshuQR;
+    if (!QR || typeof QR.create !== 'function') throw new Error('二维码模块未加载');
+    const qr = QR.create(String(value || ''), { errorCorrectionLevel: 'L' });
+    const size = qr.modules.size;
+    return Array.from({ length: size }, (_, row) =>
+      Array.from({ length: size }, (_, column) => qr.modules.get(row, column)));
   }
 
   function drawOrnamentLine(ctx, x1, y, x2, color) {

@@ -343,6 +343,24 @@ const Bazi = (() => {
       ziDayRule = 'next',
     } = opts;
 
+    const leapYear = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    const monthLength = [31, leapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)
+      || year < -9999 || year > 9999 || month < 1 || month > 12
+      || day < 1 || day > monthLength[month - 1]) {
+      throw new RangeError('出生日期不合法');
+    }
+    if (!Number.isInteger(hour) || !Number.isInteger(minute)
+      || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      throw new RangeError('出生时间不合法');
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new RangeError('出生经度应在 -180° 到 180° 之间');
+    }
+    if (!Number.isFinite(tz) || tz < -12 || tz > 14) {
+      throw new RangeError('时区应在 UTC-12 到 UTC+14 之间');
+    }
+
     const stdMeridian = tz * 15;
 
     // 1) 真太阳时校正
@@ -535,10 +553,20 @@ const Bazi = (() => {
       daysToBoundary = birthJd - (curJie ? curJie.jdLocal : birthJd);
     }
     // 3天折1年 -> 起运岁
-    const startAgeFloat = daysToBoundary / 3;
-    const startYears = Math.floor(startAgeFloat);
-    const remDays = (startAgeFloat - startYears) * 365.25 / 30.4375; // 折成月（近似）
-    const startMonths = Math.round((startAgeFloat - startYears) * 12);
+    const startAgeFloat = Math.max(0, daysToBoundary / 3);
+    let startYears = Math.floor(startAgeFloat);
+    let startMonths = Math.round((startAgeFloat - startYears) * 12);
+    if (startMonths >= 12) {
+      startYears += 1;
+      startMonths -= 12;
+    }
+
+    // 把起运的“岁、月”落实到近似公历日期，供边界展示和当前大运判断。
+    const firstMonthIndex = (opts.month - 1) + startMonths;
+    const firstStartYear = opts.year + startYears + Math.floor(firstMonthIndex / 12);
+    const firstStartMonth = ((firstMonthIndex % 12) + 12) % 12 + 1;
+    const daysInStartMonth = new Date(Date.UTC(firstStartYear, firstStartMonth, 0)).getUTCDate();
+    const firstStartDay = Math.min(opts.day, daysInStartMonth);
 
     // 大运干支：从月柱开始，顺/逆各推
     const monthIdx = result.pillars.month.index;
@@ -549,14 +577,19 @@ const Bazi = (() => {
       idx = ((idx % 60) + 60) % 60;
       const gz = jiazi(idx);
       const startAge = startYears + i * 10 - 10; // 第1步大运开始年龄
-      const startYearReal = opts.year + startAge + (startMonths >= 12 ? 1 : 0);
+      const startYear = firstStartYear + (i - 1) * 10;
       runs.push({
         step: i,
         ...gz,
         ganTenGod: tenGod(dayGan, gz.gan),
         zhiTenGod: tenGodOfZhi(dayGan, gz.zhi),
         startAge,
-        startYear: opts.year + startAge,
+        startMonths,
+        startAgeFloat: +(startAge + startMonths / 12).toFixed(2),
+        startYear,
+        startMonth: firstStartMonth,
+        startDay: firstStartDay,
+        startDate: `${startYear}-${String(firstStartMonth).padStart(2, '0')}-${String(firstStartDay).padStart(2, '0')}`,
       });
     }
 

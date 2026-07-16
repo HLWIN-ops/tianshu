@@ -3,12 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>天枢</title>
+  <meta name="description" content="天枢是一款隐私优先、算法透明的八字排盘工具，支持精确时分、真太阳时、农历互转、大运流年与本地命盘档案。">
+  <meta name="theme-color" content="#9e2b25">
+  <meta name="color-scheme" content="light">
+  <meta property="og:title" content="天枢 · 严谨八字排盘">
+  <meta property="og:description" content="生辰只在本机计算，排盘依据与边界清晰可查。">
+  <meta property="og:type" content="website">
+  <title>天枢 · 严谨八字排盘</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <!-- 进场：太极八卦开屏 -->
-  <div id="intro" class="intro" role="dialog" aria-label="天枢开场">
+  <div id="intro" class="intro is-gone" role="dialog" aria-modal="true" aria-label="天枢开场">
     <div class="intro-inner">
       <div class="intro-ring-wrap">
         <svg class="intro-ring-svg" viewBox="0 0 320 320" aria-hidden="true">
@@ -63,27 +69,33 @@
           <p>天干地支 · 阴阳五行 · 知命安身</p>
         </div>
       </div>
-      <nav class="tabs">
-        <button class="tab active" data-page="input">录入</button>
-        <button class="tab" data-page="paipan">命盘</button>
-        <button class="tab" data-page="dayun">大运</button>
-        <button class="tab" data-page="read">解读</button>
+      <nav class="tabs" role="tablist" aria-label="主功能">
+        <button class="tab active" role="tab" aria-selected="true" aria-controls="page-input" data-page="input">录入</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-paipan" data-page="paipan">命盘</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-dayun" data-page="dayun">大运</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-read" data-page="read">解读</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-archive" data-page="archive">档案</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-fun" data-page="fun">趣味</button>
       </nav>
     </header>
 
     <main>
       <!-- 录入 -->
       <section class="page active" id="page-input">
-        <p class="lede">命由天定，运由己造。请录入生辰，以推四柱。<br>融天文节气定盘、真太阳时校正、农历公历互通、神煞格局全备、分时期人生解读。</p>
+        <div class="privacy-banner">
+          <strong>出生资料只在本机计算</strong>
+          <span>无账号、无上传；只有主动保存时，资料才会进入本浏览器档案。</span>
+        </div>
+        <p class="lede">以节气定月、真太阳时校正和两种子时规则排盘。时间与地点越准确，边界判断越可靠。</p>
 
-        <form class="form" id="form" autocomplete="off">
+        <form class="form" id="form" autocomplete="off" novalidate>
           <div class="field">
-            <label>姓名</label>
-            <input type="text" id="f-name" placeholder="可不填" />
+            <label for="f-name">姓名</label>
+            <input type="text" id="f-name" placeholder="可不填，仅用于本地标记" maxlength="30" />
           </div>
 
           <div class="field">
-            <label>性别</label>
+            <span class="field-label">性别</span>
             <div class="seg" role="radiogroup">
               <label><input type="radio" name="gender" value="male" checked><span>男命 · 乾造</span></label>
               <label><input type="radio" name="gender" value="female"><span>女命 · 坤造</span></label>
@@ -91,57 +103,84 @@
           </div>
 
           <div class="field">
-            <label>历法</label>
-            <div class="seg">
+            <span class="field-label">历法</span>
+            <div class="seg" role="radiogroup">
               <label><input type="radio" name="cal" value="solar" id="cal-solar" checked><span>公历</span></label>
               <label><input type="radio" name="cal" value="lunar" id="cal-lunar"><span>农历</span></label>
             </div>
           </div>
 
+          <div class="field">
+            <label for="f-focus">此刻最关心</label>
+            <select id="f-focus"></select>
+          </div>
+
           <div class="field leap-row" id="row-leap" hidden>
-            <label>闰月</label>
-            <label class="check"><input type="checkbox" id="f-leap"><span>✦ 此农历月为闰月（如闰五月、闰六月等）</span></label>
+            <span class="field-label">闰月</span>
+            <label class="check"><input type="checkbox" id="f-leap"><span>此农历月为闰月</span></label>
           </div>
 
           <div class="grid3">
             <div class="field">
-              <label id="lbl-year">出生年</label>
-              <input type="number" id="f-year" value="1990" min="1900" max="2100" />
+              <label id="lbl-year" for="f-year">出生年</label>
+              <input type="number" id="f-year" placeholder="如 1990" min="1900" max="2100" inputmode="numeric" />
             </div>
             <div class="field">
-              <label id="lbl-month">出生月</label>
-              <input type="number" id="f-month" value="6" min="1" max="12" />
+              <label id="lbl-month" for="f-month">出生月</label>
+              <input type="number" id="f-month" placeholder="1–12" min="1" max="12" inputmode="numeric" />
             </div>
             <div class="field">
-              <label id="lbl-day">出生日</label>
-              <input type="number" id="f-day" value="15" min="1" max="31" />
+              <label id="lbl-day" for="f-day">出生日</label>
+              <input type="number" id="f-day" placeholder="1–31" min="1" max="31" inputmode="numeric" />
             </div>
           </div>
 
           <div class="field">
-            <label>出生时辰</label>
+            <span class="field-label">时间精度</span>
+            <div class="seg" role="radiogroup">
+              <label><input type="radio" name="timePrecision" value="exact" checked><span>精确时分</span></label>
+              <label><input type="radio" name="timePrecision" value="shichen"><span>只知道时辰</span></label>
+            </div>
+          </div>
+
+          <div class="field" id="row-exact-time">
+            <label for="f-time">出生时间</label>
+            <input type="time" id="f-time" step="60" />
+            <p class="hint" id="time-hint">请输入出生证明或家人记录中的钟表时间。</p>
+          </div>
+
+          <div class="field" id="row-shichen" hidden>
+            <label for="f-shi">出生时辰</label>
             <select id="f-shi" class="shichen"></select>
             <p class="hint"><span id="shi-range"></span><span id="shi-solar"></span></p>
+          </div>
+
+          <div class="field">
+            <label for="f-city">出生城市</label>
+            <select id="f-city">
+              <option value="">未确认 · 暂按东经 120°</option>
+            </select>
+            <p class="hint" id="city-note">选择城市后自动填写经度和时区；其他地点可在高级设置中手动输入。</p>
           </div>
 
           <details class="advanced">
             <summary>高级 · 真太阳时 / 子时规则</summary>
             <div class="grid3">
               <div class="field">
-                <label>出生经度</label>
-                <div class="with-unit"><input type="number" id="f-lon" value="120" min="70" max="140" step="0.1"><span>°E</span></div>
+                <label for="f-lon">出生经度</label>
+                <div class="with-unit"><input type="number" id="f-lon" value="120" min="-180" max="180" step="0.001"><span>°</span></div>
               </div>
               <div class="field">
-                <label>时区</label>
-                <div class="with-unit"><input type="number" id="f-tz" value="8" min="-12" max="14"><span>UTC+</span></div>
+                <label for="f-tz">时区</label>
+                <div class="with-unit"><input type="number" id="f-tz" value="8" min="-12" max="14" step="0.5"><span>UTC</span></div>
               </div>
               <div class="field">
-                <label>真太阳时</label>
+                <span class="field-label">真太阳时</span>
                 <label class="check"><input type="checkbox" id="f-tst" checked><span>启用校正</span></label>
               </div>
             </div>
             <div class="field zi-rule">
-              <label>子时换日</label>
+              <span class="field-label">子时换日</span>
               <div class="seg" role="radiogroup">
                 <label><input type="radio" name="ziRule" value="next" id="zi-next" checked><span>晚子时 · 23点后用次日</span></label>
                 <label><input type="radio" name="ziRule" value="same" id="zi-same"><span>子时属当日</span></label>
@@ -150,7 +189,9 @@
             </div>
           </details>
 
+          <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
           <div class="actions">
+            <button type="button" class="ghost subtle" id="btn-example">载入示例</button>
             <button type="button" class="ghost" id="btn-now">用当前时刻</button>
             <button type="submit" class="primary">开始排盘</button>
           </div>
@@ -159,7 +200,16 @@
 
       <!-- 命盘 -->
       <section class="page" id="page-paipan">
+        <div class="insight-overview" id="insight-overview"></div>
+        <div class="result-actions" aria-label="命盘操作">
+          <button type="button" class="tool-button" id="btn-save-current">保存到档案</button>
+          <button type="button" class="tool-button" id="btn-share-summary">分享摘要</button>
+          <button type="button" class="tool-button" id="btn-print">打印报告</button>
+          <button type="button" class="tool-button" data-goto="input">编辑资料</button>
+        </div>
         <div class="idcard" id="idcard"></div>
+
+        <div class="accuracy-strip" id="accuracy-strip"></div>
 
         <div class="bazi-table" id="bazi-table"></div>
 
@@ -189,6 +239,7 @@
         <div class="jump">
           <button class="ghost" data-goto="dayun">查看大运流年 →</button>
           <button class="ghost" data-goto="read">查看命盘解读 →</button>
+          <button class="ghost" data-goto="fun">测测像谁 →</button>
         </div>
       </section>
 
@@ -206,9 +257,65 @@
 
       <!-- 解读 -->
       <section class="page" id="page-read">
+        <div class="read-toolbar" id="read-toolbar" aria-label="解读目录"></div>
         <div id="read-content"></div>
       </section>
+
+      <!-- 本地命盘档案 -->
+      <section class="page" id="page-archive">
+        <div class="archive-head">
+          <div>
+            <h2 class="block-title">本地命盘档案</h2>
+            <p>资料只保存在当前浏览器。导出的 JSON 含完整出生信息，请自行妥善保管。</p>
+          </div>
+          <span class="local-badge">本机存储</span>
+        </div>
+        <div class="archive-actions">
+          <button type="button" class="tool-button" id="btn-export-profiles">导出档案</button>
+          <label class="tool-button file-button" for="f-import-profiles">导入档案</label>
+          <input type="file" id="f-import-profiles" accept="application/json,.json" hidden>
+          <button type="button" class="tool-button danger" id="btn-clear-profiles">清空档案</button>
+        </div>
+        <div class="profile-list" id="profile-list"></div>
+      </section>
+
+      <!-- 趣味 · 古今人物相似度 -->
+      <section class="page" id="page-fun">
+        <div class="fun-hero">
+          <h2 class="block-title">古今人物相似度</h2>
+          <p class="fun-lede">以日主、日柱、格局、喜用、十神、神煞、五行分布等维度，将你的命盘与历史人物库对照，看看气场与谁更近。</p>
+        </div>
+        <div class="fun-summary" id="fun-summary"></div>
+        <div class="fun-filters" id="fun-filters"></div>
+        <div class="fun-actions" id="fun-actions" hidden>
+          <button type="button" class="primary" id="btn-poster">生成分享海报</button>
+        </div>
+        <div class="fun-list" id="fun-list"></div>
+        <p class="fun-disclaimer" id="fun-disclaimer"></p>
+      </section>
+
+      <!-- 海报预览弹层 -->
+      <div class="poster-modal" id="poster-modal" hidden>
+        <div class="poster-backdrop" data-close="1"></div>
+          <div class="poster-panel" role="dialog" aria-modal="true" aria-label="分享海报" tabindex="-1">
+          <header class="poster-head">
+            <h3>分享海报</h3>
+            <button type="button" class="poster-x" data-close="1" aria-label="关闭">×</button>
+          </header>
+          <div class="poster-preview">
+            <canvas id="poster-canvas" width="720" height="1280"></canvas>
+          </div>
+          <div class="poster-btns">
+            <button type="button" class="primary" id="btn-poster-save">保存图片</button>
+            <button type="button" class="ghost" id="btn-poster-copy">复制到剪贴板</button>
+            <button type="button" class="ghost" data-close="1">关闭</button>
+          </div>
+          <p class="poster-tip">长按图片也可保存；移动端建议用「保存图片」。</p>
+        </div>
+      </div>
     </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
     <footer class="foot">
       <span class="seal">知命</span>
@@ -220,6 +327,8 @@
   <script src="js/engine.js"></script>
   <script src="js/engine-plus.js"></script>
   <script src="js/interpret.js"></script>
+  <script src="js/figures.js"></script>
+  <script src="js/product.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

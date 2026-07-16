@@ -99,9 +99,15 @@
     // 查某神煞（给定目标地支列表）在所驻地支与哪个宫位匹配
     function match(name, targetZhiList) {
       const out = [];
-      targetZhiList.forEach(zh => {
-        const idx = all.indexOf(zh);
-        if (idx >= 0) out.push({ name, zhi: zh, pillar: pillarNames[idx] });
+      const seen = new Set();
+      targetZhiList.filter(Boolean).forEach(zh => {
+        all.forEach((actual, idx) => {
+          if (actual !== zh) return;
+          const key = `${name}|${zh}|${pillarNames[idx]}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          out.push({ name, zhi: zh, pillar: pillarNames[idx] });
+        });
       });
       return out;
     }
@@ -393,30 +399,48 @@
     0x0aea6, 0x0ab50, 0x04b60, 0x0aae4, 0x0a570, 0x05260, 0x0f263, 0x0d950, 0x05b57, 0x056a0, //1960-1969
     0x096d0, 0x04dd5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6, //1970-1979
     0x095b0, 0x049b0, 0x0a974, 0x0a4b0, 0x0b27a, 0x06a50, 0x06d40, 0x0af46, 0x0ab60, 0x09570, //1980-1989
-    0x04af5, 0x04970, 0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x055c0, 0x0ab60, 0x096d5, 0x092e0, //1990-1999
+    0x04af5, 0x04970, 0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x05ac0, 0x0ab60, 0x096d5, 0x092e0, //1990-1999
     0x0c960, 0x0d954, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, 0x025d0, 0x092d0, 0x0cab5, //2000-2009
     0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, 0x15176, 0x052b0, 0x0a930, //2010-2019
     0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, 0x0d260, 0x0ea65, 0x0d530, //2020-2029
     0x05aa0, 0x076a3, 0x096d0, 0x04afb, 0x04ad0, 0x0a4d0, 0x1d0b6, 0x0d250, 0x0d520, 0x0dd45, //2030-2039
     0x0b5a0, 0x056d0, 0x055b2, 0x049b0, 0x0a577, 0x0a4b0, 0x0aa50, 0x1b255, 0x06d20, 0x0ada0, //2040-2049
     0x14b63, 0x09370, 0x049f8, 0x04970, 0x064b0, 0x168a6, 0x0ea50, 0x06b20, 0x1a6c4, 0x0aae0, //2050-2059
-    0x0a2e0, 0x0d2e3, 0x0c960, 0x0d557, 0x0d4a0, 0x0da50, 0x05d55, 0x056a0, 0x0a6d0, 0x055d4, //2060-2069
+    0x092e0, 0x0d2e3, 0x0c960, 0x0d557, 0x0d4a0, 0x0da50, 0x05d55, 0x056a0, 0x0a6d0, 0x055d4, //2060-2069
     0x052d0, 0x0a9b8, 0x0a950, 0x0b4a0, 0x0b6a6, 0x0ad50, 0x055a0, 0x0aba4, 0x0a5b0, 0x052b0, //2070-2079
     0x0b273, 0x06930, 0x07337, 0x06aa0, 0x0ad50, 0x14b55, 0x04b60, 0x0a570, 0x054e4, 0x0d160, //2080-2089
-    0x0e968, 0x0d520, 0x0daa0, 0x16aa6, 0x056d0, 0x04ae0, 0x0a9d4, 0x0a2d0, 0x0d150, 0x0f250, //2090-2099
+    0x0e968, 0x0d520, 0x0daa0, 0x16aa6, 0x056d0, 0x04ae0, 0x0a9d4, 0x0a4d0, 0x0d150, 0x0f252, //2090-2099
     0x0d520 //2100
   ];
   const GanCn = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
   const nStr1 = ["日", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
   const Animals = ["鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
 
-  function lYearDays(y) { let s = leapDays(y); for (let i = 0x8000; i > 0x8; i >>= 1) s += (lunarInfo[y - 1900] & i) ? 30 : 29; return s; }
-  function leapMonth(y) { return lunarInfo[y - 1900] & 0xf; }
+  function validLunarYear(y) { return Number.isInteger(y) && y >= 1900 && y <= 2100; }
+  function lYearDays(y) {
+    if (!validLunarYear(y)) return 0;
+    let s = leapDays(y);
+    for (let i = 0x8000; i > 0x8; i >>= 1) s += (lunarInfo[y - 1900] & i) ? 30 : 29;
+    return s;
+  }
+  function leapMonth(y) { return validLunarYear(y) ? lunarInfo[y - 1900] & 0xf : 0; }
   function leapDays(y) { if (leapMonth(y)) return (lunarInfo[y - 1900] & 0x10000) ? 30 : 29; return 0; }
-  function monthDays(y, m) { return (lunarInfo[y - 1900] & (0x10000 >> m)) ? 30 : 29; }
+  function monthDays(y, m) {
+    if (!validLunarYear(y) || !Number.isInteger(m) || m < 1 || m > 12) return 0;
+    return (lunarInfo[y - 1900] & (0x10000 >> m)) ? 30 : 29;
+  }
+
+  function validSolarDate(y, m, d) {
+    if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)
+      || y < 1900 || y > 2100 || m < 1 || m > 12 || d < 1) return false;
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+  }
 
   // 农历(y,m,d, isLeap) -> 公历 {y,m,d}
   function lunarToSolar(ly, lm, ld, isLeap) {
+    if (!validLunarYear(ly) || !Number.isInteger(lm) || lm < 1 || lm > 12
+      || !Number.isInteger(ld) || ld < 1) return null;
     let leap = leapMonth(ly);
     let offset = 0;
     for (let i = 1900; i < ly; i++) offset += lYearDays(i);
@@ -426,19 +450,23 @@
     }
     if (isLeap && leap !== lm) return null; // 该年无此闰月
     if (isLeap) offset += monthDays(ly, lm); // 进入闰月：先加本月常规天数
-    if (ld > monthDays(ly, lm) + (isLeap && leap === lm ? leapDays(ly) : 0)) return null;
+    const maxDay = isLeap ? leapDays(ly) : monthDays(ly, lm);
+    if (ld > maxDay) return null;
     offset += ld - 1;
     // 基准 1900-01-31(UTC) 为农历1900正月初一
     const base = Date.UTC(1900, 0, 31);
     const d = new Date(base + offset * 86400000);
-    return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() };
+    const result = { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() };
+    return result.y >= 1900 && result.y <= 2100 ? result : null;
   }
 
   // 公历(y,m,d) -> 农历 {year, month, day, isLeap, animal, yearGanZhi}
   function solarToLunar(y, m, d) {
+    if (!validSolarDate(y, m, d)) return null;
     const base = Date.UTC(1900, 0, 31);
     const obj = Date.UTC(y, m - 1, d);
     let offset = Math.round((obj - base) / 86400000);
+    if (offset < 0) return null;
     let ly = 1900;
     while (ly < 2100) {
       const days = lYearDays(ly);

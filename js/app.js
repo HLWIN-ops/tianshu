@@ -111,8 +111,24 @@
     const focus = document.getElementById('f-focus');
     focus.innerHTML = T.FOCUS.map(item => `<option value=${item.key}>${item.label}</option>`).join('');
     const city = document.getElementById('f-city');
-    city.insertAdjacentHTML('beforeend', T.CITIES.map(item =>
-      `<option value=${item.id}>${item.region} · ${item.name}</option>`).join(''));
+    // 按省份分组：直辖市/港澳台归入「中国」，其余按 region 归组，组内只显城市名。
+    const groups = [];
+    const groupMap = new Map();
+    T.CITIES.forEach(item => {
+      const key = item.region || '其他';
+      if (!groupMap.has(key)) { groupMap.set(key, []); groups.push(key); }
+      groupMap.get(key).push(item);
+    });
+    const order = ['中国', '河北', '山西', '辽宁', '吉林', '黑龙江', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南', '湖北', '湖南', '广东', '海南', '四川', '贵州', '云南', '西藏', '陕西', '甘肃', '青海', '宁夏', '新疆', '内蒙古', '广西', '台湾', '其他'];
+    const sorted = groups.slice().sort((a, b) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
+    city.insertAdjacentHTML('beforeend', sorted.map(region => {
+      const opts = groupMap.get(region).map(item =>
+        `<option value=${item.id}>${item.name}</option>`).join('');
+      return `<optgroup label=${region}>${opts}</optgroup>`;
+    }).join(''));
   }
 
   /* ===== 导航 ===== */

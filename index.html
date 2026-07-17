@@ -52,6 +52,16 @@
     </div>
   </div>
 
+  <section class="boot-error" id="boot-error" role="alert" hidden>
+    <span class="boot-error-mark" aria-hidden="true">!</span>
+    <div>
+      <h2>页面没能完整启动</h2>
+      <p id="boot-error-message">核心排盘组件加载失败。你的资料尚未被读取或保存，请刷新页面重试。</p>
+      <a class="tool-button" href="index.html">重新加载</a>
+    </div>
+  </section>
+  <noscript><p class="noscript">天枢需要浏览器启用 JavaScript 才能在本机完成排盘。</p></noscript>
+
   <div class="shell">
     <header class="masthead">
       <div class="brand">
@@ -71,48 +81,48 @@
       </div>
       <nav class="tabs" role="tablist" aria-label="主功能">
         <button class="tab active" role="tab" aria-selected="true" aria-controls="page-input" data-page="input">录入</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-paipan" data-page="paipan">命盘</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-dayun" data-page="dayun">大运</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-read" data-page="read">解读</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-paipan" aria-disabled="true" data-page="paipan" disabled>命盘</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-dayun" aria-disabled="true" data-page="dayun" disabled>大运</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-read" aria-disabled="true" data-page="read" disabled>解读</button>
         <button class="tab" role="tab" aria-selected="false" aria-controls="page-archive" data-page="archive">档案</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-fun" data-page="fun">趣味</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-fun" aria-disabled="true" data-page="fun" disabled>趣味</button>
       </nav>
     </header>
 
     <main>
       <!-- 录入 -->
       <section class="page active" id="page-input">
+        <section class="input-hero" aria-labelledby="input-title">
+          <p class="hero-eyebrow">隐私优先 · 依据可查 · 行动可验证</p>
+          <h2 id="input-title">30 秒，看见你当下最值得做的一件事</h2>
+          <p>先给一条命盘身份、三项结构依据和一个现实行动；想深读时，再展开完整命盘。</p>
+          <div class="hero-trust" aria-label="产品承诺">
+            <span>无需注册</span><span>浏览器本地计算</span><span>默认分享已脱敏</span>
+          </div>
+        </section>
+
+        <section class="recent-resume" id="recent-resume" hidden aria-labelledby="recent-title">
+          <div>
+            <span class="resume-kicker">继续上次</span>
+            <h2 id="recent-title">打开最近保存的命盘</h2>
+            <p id="recent-resume-meta"></p>
+          </div>
+          <button type="button" class="tool-button" id="btn-resume-profile">一键继续</button>
+        </section>
+
         <div class="privacy-banner">
           <strong>出生资料只在本机计算</strong>
-          <span>无账号、无上传；只有主动保存时，资料才会进入本浏览器档案。</span>
+          <span>无账号、无上传；主动保存后会以明文留在本浏览器，可随时导出或清除。</span>
         </div>
-        <p class="lede">以节气定月、真太阳时校正和两种子时规则排盘。时间与地点越准确，边界判断越可靠。</p>
 
         <form class="form" id="form" autocomplete="off" novalidate>
-          <div class="field">
-            <label for="f-name">姓名</label>
-            <input type="text" id="f-name" placeholder="可不填，仅用于本地标记" maxlength="30" />
-          </div>
-
-          <div class="field">
-            <span class="field-label">性别</span>
-            <div class="seg" role="radiogroup">
-              <label><input type="radio" name="gender" value="male" checked><span>男命 · 乾造</span></label>
-              <label><input type="radio" name="gender" value="female"><span>女命 · 坤造</span></label>
-            </div>
-          </div>
-
+          <div class="form-section-title"><span>1</span><div><b>出生日期</b><small>用于确定年柱、月柱与日柱</small></div></div>
           <div class="field">
             <span class="field-label">历法</span>
-            <div class="seg" role="radiogroup">
+            <div class="seg" role="radiogroup" aria-label="历法">
               <label><input type="radio" name="cal" value="solar" id="cal-solar" checked><span>公历</span></label>
               <label><input type="radio" name="cal" value="lunar" id="cal-lunar"><span>农历</span></label>
             </div>
-          </div>
-
-          <div class="field">
-            <label for="f-focus">此刻最关心</label>
-            <select id="f-focus"></select>
           </div>
 
           <div class="field leap-row" id="row-leap" hidden>
@@ -135,9 +145,10 @@
             </div>
           </div>
 
+          <div class="form-section-title"><span>2</span><div><b>出生时间</b><small>不知道分钟也可以按时辰估算</small></div></div>
           <div class="field">
             <span class="field-label">时间精度</span>
-            <div class="seg" role="radiogroup">
+            <div class="seg" role="radiogroup" aria-label="时间精度">
               <label><input type="radio" name="timePrecision" value="exact" checked><span>精确时分</span></label>
               <label><input type="radio" name="timePrecision" value="shichen"><span>只知道时辰</span></label>
             </div>
@@ -155,6 +166,7 @@
             <p class="hint"><span id="shi-range"></span><span id="shi-solar"></span></p>
           </div>
 
+          <div class="form-section-title"><span>3</span><div><b>出生地点</b><small>用于真太阳时校正；支持手动经度</small></div></div>
           <div class="field">
             <label for="f-city">出生城市</label>
             <select id="f-city">
@@ -189,11 +201,36 @@
             </div>
           </details>
 
+          <div class="form-section-title"><span>4</span><div><b>排运信息</b><small>传统排运方向所需，不用于身份识别</small></div></div>
+          <div class="field">
+            <span class="field-label">性别</span>
+            <div class="seg" role="radiogroup" aria-label="传统排运性别规则">
+              <label><input type="radio" name="gender" value="male" checked><span>男 · 乾造</span></label>
+              <label><input type="radio" name="gender" value="female"><span>女 · 坤造</span></label>
+            </div>
+          </div>
+
+          <div class="field focus-field">
+            <label for="f-focus">此刻最关心</label>
+            <select id="f-focus"></select>
+            <p class="hint">它会改变行动的落点，但不会改变四柱计算。</p>
+          </div>
+
+          <details class="personalize">
+            <summary><span>本地档案称呼</span><small>可选 · 不会出现在默认分享中</small></summary>
+            <div class="personalize-body">
+              <div class="field">
+                <label for="f-name">本地称呼</label>
+                <input type="text" id="f-name" placeholder="可不填，不会出现在默认分享中" maxlength="30" />
+              </div>
+            </div>
+          </details>
+
           <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
           <div class="actions">
             <button type="button" class="ghost subtle" id="btn-example">载入示例</button>
             <button type="button" class="ghost" id="btn-now">用当前时刻</button>
-            <button type="submit" class="primary">开始排盘</button>
+            <button type="submit" class="primary">开始排盘 · 看行动速览</button>
           </div>
         </form>
       </section>
@@ -201,6 +238,37 @@
       <!-- 命盘 -->
       <section class="page" id="page-paipan">
         <div class="insight-overview" id="insight-overview"></div>
+        <section class="reflection-card" aria-labelledby="reflection-title">
+          <header>
+            <div><span class="resume-kicker">留住行动，不留住焦虑</span><h2 id="reflection-title">本月只验证一件事</h2></div>
+            <span class="local-badge">仅本机</span>
+          </header>
+          <p>把速览变成一个可观察的小实验。记录不会上传；首次保存会同时建立本机命盘档案，并可一起导出。</p>
+          <div class="reflection-grid">
+            <div class="field reflection-action-field">
+              <label for="reflection-action">本月行动</label>
+              <input type="text" id="reflection-action" maxlength="160" placeholder="从上方建议中挑一个最小行动">
+            </div>
+            <div class="field">
+              <label for="reflection-status">进度</label>
+              <select id="reflection-status">
+                <option value="planned">准备开始</option>
+                <option value="doing">正在验证</option>
+                <option value="done">已经完成</option>
+                <option value="adjusted">调整方向</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="reflection-evidence">现实证据</label>
+            <textarea id="reflection-evidence" maxlength="400" rows="3" placeholder="发生了什么？哪些证据支持或反驳这条建议？"></textarea>
+          </div>
+          <div class="reflection-actions">
+            <span id="reflection-month"></span>
+            <button type="button" class="tool-button" id="btn-save-reflection">保存本月记录</button>
+            <button type="button" class="tool-button danger" id="btn-clear-reflection">清除</button>
+          </div>
+        </section>
         <div class="result-actions" aria-label="命盘操作">
           <button type="button" class="tool-button" id="btn-save-current">保存到档案</button>
           <button type="button" class="tool-button" id="btn-share-summary">分享摘要</button>
@@ -295,7 +363,7 @@
       </section>
 
       <!-- 海报预览弹层 -->
-      <div class="poster-modal" id="poster-modal" hidden>
+      <div class="poster-modal" id="poster-modal" aria-hidden="true" hidden>
         <div class="poster-backdrop" data-close="1"></div>
           <div class="poster-panel" role="dialog" aria-modal="true" aria-label="分享海报" tabindex="-1">
           <header class="poster-head">
@@ -313,22 +381,42 @@
           <p class="poster-tip">长按图片也可保存；移动端建议用「保存图片」。</p>
         </div>
       </div>
+
+      <!-- 分享文本脱敏预览 -->
+      <div class="poster-modal" id="share-modal" aria-hidden="true" hidden>
+        <div class="poster-backdrop" data-share-close="1"></div>
+        <div class="poster-panel share-panel" role="dialog" aria-modal="true" aria-labelledby="share-modal-title" tabindex="-1">
+          <header class="poster-head">
+            <div><span class="resume-kicker">发送前确认</span><h3 id="share-modal-title">脱敏分享预览</h3></div>
+            <button type="button" class="poster-x" data-share-close="1" aria-label="关闭">×</button>
+          </header>
+          <div class="share-preview-wrap">
+            <p>默认不含姓名、出生日期、时间、地点与完整四柱。你仍可以取消分享。</p>
+            <pre id="share-preview-text"></pre>
+          </div>
+          <div class="poster-btns">
+            <button type="button" class="primary" id="btn-share-confirm">系统分享</button>
+            <button type="button" class="ghost" id="btn-share-copy">复制文本</button>
+            <button type="button" class="ghost" data-share-close="1">取消</button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
     <footer class="foot">
-      <span class="seal">知命</span>
-      本排盘以传统命理学为据，仅供参考，切勿迷信。
-      <span class="seal">安身</span>
+      <div><span class="seal">知命</span>传统文化参考，不替代医疗、投资或法律建议。<span class="seal">安身</span></div>
+      <nav aria-label="信任与规则"><a href="methodology.html">方法与边界</a><a href="privacy.html">隐私说明</a></nav>
     </footer>
   </div>
 
-  <script src="js/engine.js"></script>
-  <script src="js/engine-plus.js"></script>
-  <script src="js/interpret.js"></script>
-  <script src="js/figures.js"></script>
-  <script src="js/product.js"></script>
-  <script src="js/app.js"></script>
+  <script defer src="js/engine.js"></script>
+  <script defer src="js/engine-plus.js"></script>
+  <script defer src="js/interpret.js"></script>
+  <script defer src="js/figures.js"></script>
+  <script defer src="js/product.js"></script>
+  <script defer src="js/qr-vendor.js"></script>
+  <script defer src="js/app.js"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '2.0.0';
+  const VERSION = '2.1.0';
   const PROFILE_KEY = 'tianshu.profiles.v1';
   const PROFILE_LIMIT = 30;
   const GAN_WX = { 甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土', 己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水' };
@@ -435,6 +435,56 @@
     },
   };
 
+  const FOCUS_CONTEXT = {
+    overall: { object: '年度主线', unit: '一项可在七天内验证的小行动' },
+    career: { object: '一个可展示、可验收的职业成果', unit: '一个能被他人检验的交付节点' },
+    wealth: { object: '现金流安全与机会验证', unit: '一笔有上限、可复盘的小额试验' },
+    relationship: { object: '一段最重要关系里的具体期待', unit: '一次说清请求与边界的对话' },
+    wellbeing: { object: '睡眠、饮食或运动中的一个可控变量', unit: '一个连续七天可记录的轻量习惯' },
+  };
+
+  const TEN_GOD_GUIDE = {
+    self: {
+      lead: '先明确谁负责、谁协作，再进入竞争或资源分配',
+      risk: '避免被同伴比较或一时胜负带偏长期目标',
+      metric: '记录一次协作中“承诺—交付—反馈”是否一致',
+    },
+    output: {
+      lead: '把想法做成能被看见的表达、作品或验证样本',
+      risk: '避免只追求表达速度，忽略规则、受众与收尾',
+      metric: '每周完成一次公开输出，并记录真实反馈',
+    },
+    wealth: {
+      lead: '把资源、报价和交换条件写清楚，再决定是否加码',
+      risk: '避免把机会感等同于收益确定性',
+      metric: '记录投入上限、退出条件和实际回报',
+    },
+    authority: {
+      lead: '把责任拆成有期限、有标准的交付节点',
+      risk: '避免在压力下接受边界模糊的责任或承诺',
+      metric: '每周核对一次职责、进度与阻塞项',
+    },
+    resource: {
+      lead: '先补方法、信息与恢复，再用系统化流程推进',
+      risk: '避免长期准备却迟迟不进入真实验证',
+      metric: '每学一项方法，就安排一次最小实践',
+    },
+    neutral: {
+      lead: '用小步试验换取现实反馈，再决定下一步',
+      risk: '避免把结构提示当成确定事件',
+      metric: '记录假设、行动和结果三项事实',
+    },
+  };
+
+  const PLAIN_IDENTITY = {
+    self: '你更习惯自主推进，也会敏锐感受到同伴之间的分工与比较',
+    output: '你更擅长把想法变成表达、作品或可被看见的成果',
+    wealth: '你对资源、结果和交换条件较敏感，适合把机会拆开验证',
+    authority: '你更容易在明确规则、责任和压力目标中找到推进方向',
+    resource: '你更擅长先理解方法、吸收信息，再建立自己的稳定路径',
+    neutral: '你适合先观察现实反馈，再逐步确定自己的推进方式',
+  };
+
   function pad(n) { return String(n).padStart(2, '0'); }
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -530,6 +580,41 @@
     return active;
   }
 
+  function tenGodFamily(name) {
+    const value = String(name || '');
+    if (/比肩|劫财/.test(value)) return 'self';
+    if (/食神|伤官/.test(value)) return 'output';
+    if (/正财|偏财/.test(value)) return 'wealth';
+    if (/正官|七杀/.test(value)) return 'authority';
+    if (/正印|偏印/.test(value)) return 'resource';
+    return 'neutral';
+  }
+
+  function strengthAdvice(strength) {
+    const level = String(strength && strength.level || '');
+    if (/身弱/.test(level)) return '盘面偏弱，单次只推进一个重点，先确认时间、资源和恢复余量。';
+    if (/身强/.test(level)) return '盘面偏强，主动设置截止时间和外部反馈，避免只凭惯性推进。';
+    if (/从/.test(level)) return '盘面有从势特征，顺着已有资源验证，但保留清晰退出条件。';
+    return '强弱信号居中，用七天小试验比一次性押注更稳妥。';
+  }
+
+  function relationSummary(chart, year) {
+    const current = year && Array.isArray(year.relWithDayZhi) ? year.relWithDayZhi : [];
+    const natal = chart && Array.isArray(chart.relations)
+      ? chart.relations.flatMap(item => Array.isArray(item.type) ? item.type : []) : [];
+    const all = Array.from(new Set(current.concat(natal))).slice(0, 3);
+    return all.length ? all.join('、') : '';
+  }
+
+  function plainIdentity(pattern, strength) {
+    const base = PLAIN_IDENTITY[tenGodFamily(pattern && pattern.primary)] || PLAIN_IDENTITY.neutral;
+    const level = String(strength && strength.level || '');
+    if (/身弱/.test(level)) return `${base}；眼下更适合缩小承诺，先确认时间、资源和恢复余量`;
+    if (/身强/.test(level)) return `${base}；眼下要主动设置截止与反馈，避免只凭惯性加速`;
+    if (/从/.test(level)) return `${base}；眼下可以顺着已有资源推进，同时保留退出条件`;
+    return `${base}；眼下用七天小试验换取反馈，比一次性押注更稳妥`;
+  }
+
   function buildInsights(chart, focus = 'overall', now = new Date()) {
     const safeFocus = FOCUS_ACTIONS[focus] ? focus : 'overall';
     const day = chart && chart.dayMaster ? chart.dayMaster : { gan: '—', wuxing: '—', yinyang: '' };
@@ -539,27 +624,51 @@
     const year = (chart && chart.liunian || []).find(n => n.isCurrent) || (chart && chart.liunian || [])[0];
     const run = currentRun(chart, now);
     const action = FOCUS_ACTIONS[safeFocus];
+    const focusContext = FOCUS_CONTEXT[safeFocus];
     const yearGanWx = year ? GAN_WX[year.gan] : '';
     const yearZhiWx = year ? ZHI_WX[year.zhi] : '';
     const xiHit = year && useGod.xi && (useGod.xi.includes(yearGanWx) || useGod.xi.includes(yearZhiWx));
     const jiHit = year && useGod.ji && (useGod.ji.includes(yearGanWx) || useGod.ji.includes(yearZhiWx));
     const signal = xiHit && !jiHit ? '顺势' : (jiHit && !xiHit ? '审慎' : '平衡');
     const theme = year && year.tenGod ? year.tenGod : '本命结构';
+    const yearGuide = TEN_GOD_GUIDE[tenGodFamily(theme)];
+    const runTheme = run ? (run.ganTenGod || run.zhiTenGod || '阶段主题') : '起运前阶段';
+    const runGuide = TEN_GOD_GUIDE[tenGodFamily(runTheme)];
+    const relations = relationSummary(chart, year);
+    const strengthLine = strengthAdvice(strength);
+    const signalLine = jiHit && !xiHit
+      ? `流年五行与忌神相交，先给${focusContext.object}设置投入上限和退出条件。`
+      : (xiHit && !jiHit
+        ? `流年五行与喜用相交，可以主动推进，但仍要用现实反馈校准。`
+        : `流年喜忌信号混合，适合先做${focusContext.unit}。`);
     const evidence = [
       `日主 ${day.gan}${day.wuxing}${day.yinyang || ''}`,
       `${pattern.gridName || '格局待定'} · ${strength.level || '强弱待定'}`,
-      useGod.xi && useGod.xi.length ? `喜用 ${useGod.xi.join('、')}` : '喜用待定',
+      useGod.xi && useGod.xi.length ? `喜用 ${useGod.xi.join('、')} · 流年${signal}` : `喜用待定 · 流年${signal}`,
     ];
     const actions = [
-      { label: '主线', text: action.lead, evidence: `今年干支五行${yearGanWx || '—'}、${yearZhiWx || '—'}，主题偏向「${theme}」，当前判断为${signal}。` },
-      { label: '边界', text: action.caution, evidence: xiHit ? '流年与喜用有交集，仍需以现实信息和风险边界为先。' : (jiHit ? '流年与忌神有交集，适合放慢节奏、保留备选。' : '流年与喜忌交集不明显，适合用小步试错获得反馈。') },
-      { label: '习惯', text: action.habit, evidence: '把命理提示转成可观察行为，避免把结构倾向当作确定事件。' },
+      {
+        label: '现在做',
+        text: `围绕${focusContext.object}，先完成${focusContext.unit}：${yearGuide.lead}。`,
+        evidence: `${year ? `${year.year}年${year.name}` : '当前年份'}以「${theme}」为表层主题；${run ? `${run.name}大运` : '起运前'}以「${runTheme}」为阶段背景。`,
+      },
+      {
+        label: '守住边界',
+        text: `${signalLine}${relations ? ` 同时留意盘面中的${relations}关系信号。` : ''}`,
+        evidence: `${strengthLine}${relations ? ` 关系结构检出：${relations}；它只描述互动倾向，不等于事件必然发生。` : ''}`,
+      },
+      {
+        label: '如何验证',
+        text: `${runGuide.metric}；${action.habit}`,
+        evidence: `大运「${runTheme}」与流年「${theme}」共同决定观察角度；若连续四周没有现实证据，应降低这条建议的权重。`,
+      },
     ];
     return {
       focus: safeFocus,
       focusLabel: (FOCUS.find(f => f.key === safeFocus) || FOCUS[0]).label,
-      headline: `${day.gan}${day.wuxing}日主 · ${pattern.gridName || '格局待定'} · ${strength.level || '强弱待定'}`,
-      subhead: year ? `${year.year} · ${year.name} · ${theme}主题 · ${signal}` : '当前流年待定',
+      headline: plainIdentity(pattern, strength),
+      technicalHeadline: `${day.gan}${day.wuxing}日主 · ${pattern.gridName || '格局待定'} · ${strength.level || '强弱待定'}`,
+      subhead: year ? `${year.year} 年观察：${yearGuide.lead}；当前节奏以“${signal}”为宜。` : '当前年份信号待定，先以现实反馈为准。',
       year,
       run,
       evidence,
@@ -630,21 +739,58 @@
     const next = [profile, ...list.filter(item => item.id !== profile.id)];
     return writeProfiles(storage, next) ? profile : null;
   }
+  function importProfilesAtomic(storage, entries) {
+    if (!Array.isArray(entries) || !entries.length) return { profiles: [], total: readProfiles(storage).length };
+    const candidates = entries.slice(0, PROFILE_LIMIT).map((entry, index) => {
+      const input = entry && entry.input ? entry.input : entry;
+      if (!validProfileInput(input)) throw new Error(`第 ${index + 1} 条档案字段无效`);
+      return { input: normalizeInput(input), label: String(entry && entry.label || input.name || '未署名命主').trim().slice(0, 30) };
+    });
+    let next = readProfiles(storage).map(profile => Object.assign({}, profile));
+    const imported = [];
+    const now = new Date().toISOString();
+    candidates.forEach((candidate, index) => {
+      const signature = profileSignature(candidate.input);
+      const found = next.find(item => item.signature === signature);
+      const profile = found ? Object.assign({}, found) : {
+        id: `p_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 7)}`,
+        createdAt: now,
+      };
+      profile.input = candidate.input;
+      profile.signature = signature;
+      profile.label = candidate.label;
+      profile.updatedAt = now;
+      next = [profile, ...next.filter(item => item.id !== profile.id)].slice(0, PROFILE_LIMIT);
+      imported.push(profile);
+    });
+    if (!writeProfiles(storage, next)) throw new Error('浏览器存储写入失败');
+    return { profiles: imported, total: next.length };
+  }
   function removeProfile(storage, id) {
     const list = readProfiles(storage).filter(item => item.id !== id);
     return writeProfiles(storage, list);
   }
   function clearProfiles(storage) { return writeProfiles(storage, []); }
-  function shareText(chart, insights) {
+  function shareUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      if (!/^https?:$/.test(url.protocol)) return '';
+      url.search = '';
+      url.hash = '';
+      return url.toString();
+    } catch (_) { return ''; }
+  }
+  function shareText(chart, insights, url) {
     if (!chart || !chart.pillars) return '';
-    const p = chart.pillars;
+    const target = shareUrl(url);
     const lines = [
-      '天枢 · 命盘速览',
-      `四柱：${p.year.name} ${p.month.name} ${p.day.name} ${p.hour.name}`,
+      '天枢 · 我的年度行动速览',
       insights ? insights.headline : '',
       insights ? insights.subhead : '',
-      insights && insights.actions[0] ? `主线：${insights.actions[0].text}` : '',
+      insights && insights.actions[0] ? `现在做：${insights.actions[0].text}` : '',
+      '已隐藏姓名、出生日期、时间、地点与完整四柱',
       '本地计算 · 传统文化参考，不作确定性预言',
+      target ? `测同款：${target}` : '',
     ];
     return lines.filter(Boolean).join('\n');
   }
@@ -653,6 +799,6 @@
     VERSION, PROFILE_KEY, CITIES, FOCUS,
     escapeHtml, isValidSolarDate, parseTime, zhiIndexFromMinutes, formatClock,
     buildAccuracy, buildInsights, normalizeInput, validProfileInput, profileSignature,
-    readProfiles, saveProfile, removeProfile, clearProfiles, shareText,
+    readProfiles, saveProfile, importProfilesAtomic, removeProfile, clearProfiles, shareUrl, shareText,
   };
 });

@@ -846,15 +846,18 @@
     if (!action || !currentFormInput) return;
     const profile = savedCurrentProfile();
     const record = profile ? readReflections().find(item => item.id === reflectionId(profile)) : null;
-    action.value = record ? record.action : '';
-    action.placeholder = currentInsights && currentInsights.actions[0]
-      ? currentInsights.actions[0].text : '从上方建议中挑一个最小行动';
+    const generatedAction = currentInsights && currentInsights.actions[0]
+      ? currentInsights.actions[0].text : '从当前待办中只选一件事，写清完成标准，并在 7 天内完成第一版。';
+    action.value = record ? record.action : generatedAction;
     document.getElementById('reflection-status').value = record ? record.status : 'planned';
     document.getElementById('reflection-evidence').value = record ? record.evidence : '';
-    const [year, month] = reflectionMonth().split('-');
+    document.getElementById('reflection-review').open = Boolean(record && (record.evidence || record.status === 'done' || record.status === 'adjusted'));
+    const start = new Date();
+    const end = new Date(start); end.setDate(start.getDate() + 7);
+    const range = `${start.getMonth() + 1}月${start.getDate()}日—${end.getMonth() + 1}月${end.getDate()}日`;
     document.getElementById('reflection-month').textContent = record
-      ? `${year} 年 ${Number(month)} 月 · 已于 ${new Date(record.updatedAt).toLocaleDateString('zh-CN')} 保存`
-      : `${year} 年 ${Number(month)} 月 · 尚未保存`;
+      ? `本轮 ${range} · 已于 ${new Date(record.updatedAt).toLocaleDateString('zh-CN')} 保存`
+      : `本轮 ${range} · 尚未保存`;
   }
 
   function saveReflection() {
@@ -862,7 +865,7 @@
     const action = document.getElementById('reflection-action').value.trim();
     const evidence = document.getElementById('reflection-evidence').value.trim();
     const status = document.getElementById('reflection-status').value;
-    if (!action) { document.getElementById('reflection-action').focus(); toast('先写下一件准备验证的小事'); return; }
+    if (!action) { document.getElementById('reflection-action').focus(); toast('系统建议可以修改，但行动内容不能为空'); return; }
     const existingProfile = savedCurrentProfile();
     const profile = existingProfile || T.saveProfile(localStorage, currentFormInput, currentFormInput.name || '未署名命主');
     if (!profile) { toast('保存失败，请检查浏览器存储权限'); return; }
@@ -872,7 +875,7 @@
     if (!writeReflections(next)) { toast('保存失败，请检查浏览器存储权限'); return; }
     if (!existingProfile) { renderRecentProfile(); }
     renderReflection();
-    toast(existingProfile ? '本月记录已保存在当前浏览器' : '已建立本机档案并保存本月记录');
+    toast(existingProfile ? '7 天行动已保存在当前浏览器' : '已建立本机档案并保存 7 天行动');
   }
 
   function clearReflection() {

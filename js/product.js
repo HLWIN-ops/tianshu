@@ -436,11 +436,35 @@
   };
 
   const FOCUS_CONTEXT = {
-    overall: { object: '年度主线', unit: '一项可在七天内验证的小行动' },
-    career: { object: '一个可展示、可验收的职业成果', unit: '一个能被他人检验的交付节点' },
-    wealth: { object: '现金流安全与机会验证', unit: '一笔有上限、可复盘的小额试验' },
-    relationship: { object: '一段最重要关系里的具体期待', unit: '一次说清请求与边界的对话' },
-    wellbeing: { object: '睡眠、饮食或运动中的一个可控变量', unit: '一个连续七天可记录的轻量习惯' },
+    overall: {
+      object: '年度主线', unit: '一项可在七天内验证的小行动',
+      task: '从当前待办中只选一件最重要的事，今天写下完成标准，并在 7 天内做出第一个可交付版本。',
+    },
+    career: {
+      object: '一个可展示、可验收的职业成果', unit: '一个能被他人检验的交付节点',
+      task: '选一个正在推进的任务，今天写清交付物和截止日，并在 7 天内交出第一版。',
+    },
+    wealth: {
+      object: '现金流安全与机会验证', unit: '一笔有上限、可复盘的小额试验',
+      task: '检查最近 7 天的收支，只选一项可调整支出或小额机会，先写明金额上限再行动。',
+    },
+    relationship: {
+      object: '一段最重要关系里的具体期待', unit: '一次说清请求与边界的对话',
+      task: '选一段重要关系，约一次 20 分钟对话：只表达一个具体请求，并请对方复述理解。',
+    },
+    wellbeing: {
+      object: '睡眠、饮食或运动中的一个可控变量', unit: '一个连续七天可记录的轻量习惯',
+      task: '从睡眠、饮食、运动中只选一项，设定一个最低标准，连续 7 天每天记录是否完成。',
+    },
+  };
+
+  const TEN_GOD_EXECUTION = {
+    self: '如果涉及他人，开始前先写清各自分工。',
+    output: '不要继续准备，先做出一个能给别人看的版本。',
+    wealth: '开始前写下投入上限和停止条件。',
+    authority: '务必写清验收标准和截止时间。',
+    resource: '准备时间最多 30 分钟，随后立即进入实践。',
+    neutral: '完成后只记录事实，不急着下结论。',
   };
 
   const TEN_GOD_GUIDE = {
@@ -632,6 +656,7 @@
     const signal = xiHit && !jiHit ? '顺势' : (jiHit && !xiHit ? '审慎' : '平衡');
     const theme = year && year.tenGod ? year.tenGod : '本命结构';
     const yearGuide = TEN_GOD_GUIDE[tenGodFamily(theme)];
+    const execution = TEN_GOD_EXECUTION[tenGodFamily(theme)] || TEN_GOD_EXECUTION.neutral;
     const runTheme = run ? (run.ganTenGod || run.zhiTenGod || '阶段主题') : '起运前阶段';
     const runGuide = TEN_GOD_GUIDE[tenGodFamily(runTheme)];
     const relations = relationSummary(chart, year);
@@ -649,7 +674,7 @@
     const actions = [
       {
         label: '现在做',
-        text: `围绕${focusContext.object}，先完成${focusContext.unit}：${yearGuide.lead}。`,
+        text: `${focusContext.task}${execution}`,
         evidence: `${year ? `${year.year}年${year.name}` : '当前年份'}以「${theme}」为表层主题；${run ? `${run.name}大运` : '起运前'}以「${runTheme}」为阶段背景。`,
       },
       {

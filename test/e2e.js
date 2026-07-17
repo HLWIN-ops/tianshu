@@ -222,8 +222,13 @@ async function checkTabsAndPoster(page, viewportName) {
 
 async function saveAndReopenProfile(page, name, viewportName) {
   await page.locator('.tab[data-page=paipan]').click();
+  const generatedAction = await page.locator('#reflection-action').inputValue();
+  const headlineAction = (await page.locator('.action-primary > p').innerText()).trim();
+  assert.equal(generatedAction, headlineAction, '系统应自动填好七天行动，而不是让用户从空白录入');
+  assert.match(generatedAction, /7 天|7天|20 分钟|每天记录/, '系统建议应是具体可执行动作');
   await page.locator('#reflection-action').fill('本月完成一个可验收的小行动');
   await page.locator('#reflection-status').selectOption('doing');
+  await page.locator('#reflection-review > summary').click();
   await page.locator('#reflection-evidence').fill('先记录事实，再检查建议是否成立。');
   await page.locator('#btn-save-reflection').click();
   const reflectionCount = await page.evaluate(() => JSON.parse(localStorage.getItem('tianshu.reflections.v1') || '[]').length);

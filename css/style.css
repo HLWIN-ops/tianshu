@@ -968,8 +968,16 @@ input[type=text], input[type=number], input[type=time], select { min-height: 48p
 .reflection-card .field { margin-bottom: 12px; }
 .reflection-card textarea { width: 100%; resize: vertical; min-height: 78px; padding: 10px 12px; border: 1px solid #d8cfbd; border-radius: 10px; background: #fff; color: var(--ink); font: inherit; line-height: 1.6; outline: none; }
 .reflection-card textarea:focus { border-color: var(--wood); box-shadow: 0 0 0 3px rgba(58,125,58,.1); }
+.reflection-action-field textarea { min-height: 112px; background: #fffef8; font-weight: 600; }
+.reflection-review { margin: 0 0 12px; border: 1px dashed rgba(58,125,58,.28); border-radius: 10px; background: rgba(255,255,255,.58); }
+.reflection-review > summary { display: flex; align-items: center; gap: 8px; padding: 10px 12px; color: #315d37; font-size: .82rem; font-weight: 700; cursor: pointer; list-style: none; }
+.reflection-review > summary::before { content: '＋'; color: var(--wood); }
+.reflection-review[open] > summary::before { content: '－'; }
+.reflection-review > summary small { margin-left: auto; color: var(--ink-2); font-size: .72rem; font-weight: 400; }
+.reflection-review .field { padding: 0 12px 12px; margin: 0; }
 .reflection-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .reflection-actions > span { margin-right: auto; color: var(--ink-2); font-size: .76rem; }
+.primary.compact { min-width: 0; padding: 9px 16px; border-radius: 8px; font-size: .84rem; letter-spacing: .08em; }
 
 .read-card { padding: 0; overflow: hidden; scroll-margin-top: 74px; }
 .read-card > h3 { margin: 0; }

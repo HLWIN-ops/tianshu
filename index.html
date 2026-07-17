@@ -243,17 +243,17 @@
         <div class="insight-overview" id="insight-overview"></div>
         <section class="reflection-card" aria-labelledby="reflection-title">
           <header>
-            <div><span class="resume-kicker">留住行动，不留住焦虑</span><h2 id="reflection-title">本月只验证一件事</h2></div>
+            <div><span class="resume-kicker">天枢已经替你生成</span><h2 id="reflection-title">你的 7 天行动</h2></div>
             <span class="local-badge">仅本机</span>
           </header>
-          <p>把速览变成一个可观察的小实验。记录不会上传；首次保存会同时建立本机命盘档案，并可一起导出。</p>
+          <p>不需要从空白开始：直接采用下方建议，或按现实情况修改后保存。7 天后再回来记录结果。</p>
           <div class="reflection-grid">
             <div class="field reflection-action-field">
-              <label for="reflection-action">本月行动</label>
-              <input type="text" id="reflection-action" maxlength="160" placeholder="从上方建议中挑一个最小行动">
+              <label for="reflection-action">系统建议 · 可以修改</label>
+              <textarea id="reflection-action" maxlength="160" rows="3"></textarea>
             </div>
             <div class="field">
-              <label for="reflection-status">进度</label>
+              <label for="reflection-status">7 天进度</label>
               <select id="reflection-status">
                 <option value="planned">准备开始</option>
                 <option value="doing">正在验证</option>
@@ -262,13 +262,16 @@
               </select>
             </div>
           </div>
-          <div class="field">
-            <label for="reflection-evidence">现实证据</label>
-            <textarea id="reflection-evidence" maxlength="400" rows="3" placeholder="发生了什么？哪些证据支持或反驳这条建议？"></textarea>
-          </div>
+          <details class="reflection-review" id="reflection-review">
+            <summary>7 天后回来复盘 <small>现在可以不填</small></summary>
+            <div class="field">
+              <label for="reflection-evidence">实际发生了什么</label>
+              <textarea id="reflection-evidence" maxlength="400" rows="3" placeholder="完成了吗？实际有什么变化？这条建议有用、没用，还是需要调整？"></textarea>
+            </div>
+          </details>
           <div class="reflection-actions">
             <span id="reflection-month"></span>
-            <button type="button" class="tool-button" id="btn-save-reflection">保存本月记录</button>
+            <button type="button" class="primary compact" id="btn-save-reflection">采用并保存</button>
             <button type="button" class="tool-button danger" id="btn-clear-reflection">清除</button>
           </div>
         </section>

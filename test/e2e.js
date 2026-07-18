@@ -154,9 +154,22 @@ async function createChart(page, name) {
   await page.locator('#f-name').fill(name);
   await page.locator('#form button[type=submit]').click();
   await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
-  await page.locator('#bazi-table .bt-gan').first().waitFor({ state: 'visible' });
+  await page.locator('#insight-overview .signal-copy h2').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#bazi-table .bt-gan').count(), 4, '命盘应渲染四柱天干');
+  assert.equal(await page.locator('#mobile-pillar-grid .mobile-pillar-card').count(), 4, '移动端专业盘应生成四张柱卡');
+  assert.equal(await page.locator('#professional-vault').getAttribute('open'), null, '专业盘面默认应收起');
   assert.ok((await page.locator('#insight-overview').innerText()).trim().length > 20, '命盘首屏应有有效速览');
+  await page.locator('#professional-vault > summary').click();
+  assert.equal(await page.locator('#professional-vault').getAttribute('open'), '', '专业盘面入口应可点击展开');
+  const professionalVisible = profileViewportWidth(page) <= 720
+    ? await page.locator('#mobile-pillar-grid .mobile-pillar-card').first().isVisible()
+    : await page.locator('#bazi-table .bt-gan').first().isVisible();
+  assert.equal(professionalVisible, true, '展开专业盘后应在当前视口显示盘面内容');
+  await page.locator('#professional-vault > summary').click();
+}
+
+function profileViewportWidth(page) {
+  return page.viewportSize()?.width || 1024;
 }
 
 async function assertSharePreview(page, profileName) {
@@ -175,10 +188,9 @@ async function assertSharePreview(page, profileName) {
 
 async function checkTabsAndPoster(page, viewportName) {
   const checks = [
-    ['paipan', '#bazi-table'],
+    ['paipan', '#insight-overview'],
     ['dayun', '#dayun-timeline'],
     ['read', '#read-content .read-card'],
-    ['fun', '#fun-list .fun-card'],
   ];
 
   for (const [tab, content] of checks) {
@@ -192,7 +204,10 @@ async function checkTabsAndPoster(page, viewportName) {
   await page.keyboard.press('ArrowRight');
   await page.locator('#page-dayun.active').waitFor({ state: 'visible' });
   assert.equal(await page.locator('.tab[data-page=dayun]').getAttribute('aria-selected'), 'true', '方向键应切换标签页');
-  await page.locator('.tab[data-page=fun]').click();
+  await page.locator('.tab[data-page=paipan]').click();
+  await page.locator('[data-goto=fun]').click();
+  await page.locator('#page-fun.active').waitFor({ state: 'visible' });
+  await page.locator('#fun-list .fun-card').first().waitFor({ state: 'visible' });
 
   await page.locator('#btn-poster').click();
   await page.locator('#poster-modal').waitFor({ state: 'visible' });
@@ -222,15 +237,27 @@ async function checkTabsAndPoster(page, viewportName) {
 
 async function saveAndReopenProfile(page, name, viewportName) {
   await page.locator('.tab[data-page=paipan]').click();
+  const baziBeforeFocus = await page.locator('#bazi-table').textContent();
+  const actionBeforeFocus = await page.locator('#reflection-action').inputValue();
+  await page.locator('[data-result-focus=career]').click();
+  const careerAction = await page.locator('#reflection-action').inputValue();
+  assert.notEqual(careerAction, actionBeforeFocus, '结果页切换关注主题后应更新现实建议');
+  assert.equal(await page.locator('#f-focus').inputValue(), 'career', '结果页主题切换应同步录入表单');
+  assert.equal(await page.locator('#bazi-table').textContent(), baziBeforeFocus, '切换关注主题不得重新计算或改变四柱');
+  await page.locator('[data-result-focus=overall]').click();
   const generatedAction = await page.locator('#reflection-action').inputValue();
-  const headlineAction = (await page.locator('.action-primary > p').innerText()).trim();
-  assert.equal(generatedAction, headlineAction, '系统应自动填好七天行动，而不是让用户从空白录入');
+  const previewAction = (await page.locator('#reflection-action-preview').innerText()).trim();
+  assert.equal(generatedAction, previewAction, '系统应直接展示行动建议，而不是让用户从空白录入');
   assert.match(generatedAction, /7 天|7天|20 分钟|每天记录/, '系统建议应是具体可执行动作');
+  await page.locator('#reflection-editor > summary').click();
   await page.locator('#reflection-action').fill('本月完成一个可验收的小行动');
-  await page.locator('#reflection-status').selectOption('doing');
   await page.locator('#reflection-review > summary').click();
+  await page.locator('#reflection-status').selectOption('doing');
   await page.locator('#reflection-evidence').fill('先记录事实，再检查建议是否成立。');
   await page.locator('#btn-save-reflection').click();
+  const reflectionRecord = await page.evaluate(() => JSON.parse(localStorage.getItem('tianshu.reflections.v1') || '[]')[0]);
+  assert.match(reflectionRecord.cycle || '', /^\d{4}-\d{2}-\d{2}$/, '行动应以具体开始日期建立周期');
+  assert.ok(Date.parse(reflectionRecord.dueAt) > Date.parse(reflectionRecord.startedAt), '行动应保存结束日期');
   const reflectionCount = await page.evaluate(() => JSON.parse(localStorage.getItem('tianshu.reflections.v1') || '[]').length);
   assert.equal(reflectionCount, 1, '本月行动记录应保存在本机');
   await page.locator('#btn-save-current').click();
@@ -296,6 +323,7 @@ async function saveAndReopenProfile(page, name, viewportName) {
 
   await card.locator('[data-action=load]').click();
   await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
+  if (await page.locator('#professional-vault').getAttribute('open') === null) await page.locator('#professional-vault > summary').click();
   assert.match(await page.locator('#idcard').innerText(), new RegExp(name));
   assert.equal(await page.locator('#reflection-action').inputValue(), '本月完成一个可验收的小行动', '恢复命盘时应恢复本月行动');
 
@@ -303,6 +331,7 @@ async function saveAndReopenProfile(page, name, viewportName) {
   await page.locator('#recent-resume').waitFor({ state: 'visible' });
   await page.locator('#btn-resume-profile').click();
   await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
+  if (await page.locator('#professional-vault').getAttribute('open') === null) await page.locator('#professional-vault > summary').click();
   assert.match(await page.locator('#idcard').innerText(), new RegExp(name), '首页最近档案应可一键继续');
 }
 
@@ -330,8 +359,8 @@ async function assertOptionalDependencyDegrades(browser, baseUrl) {
     await page.goto(baseUrl, { waitUntil: 'load' });
     await page.locator('#btn-example').click();
     await page.locator('#form button[type=submit]').click();
-    await page.locator('#page-paipan.active #bazi-table').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('.tab[data-page=fun]').isDisabled(), true, '人物库缺失时只应关闭趣味模块');
+    await page.locator('#page-paipan.active #insight-overview').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('[data-goto=fun]').isDisabled(), true, '人物库缺失时只应关闭人物对照模块');
     assert.equal(await page.locator('#boot-error').isHidden(), true, '非核心模块缺失不应让核心排盘失败');
     console.log('  ✓ 人物库脚本缺失时核心排盘继续可用');
   } finally {
@@ -385,7 +414,10 @@ async function runJourney(browser, baseUrl, profile) {
     assert.equal(responseHeaders['x-content-type-options'], 'nosniff');
     await page.locator('#intro').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('#page-input.active').count(), 1, '普通访问不应被品牌开屏拦截');
-    assert.equal(await page.locator('.tab[data-page=paipan]').isDisabled(), true, '排盘前结果标签应锁定');
+    assert.equal(await page.locator('.tab[data-page=paipan]').isDisabled(), false, '排盘前结果标签仍应可点击并给出解释');
+    await page.locator('.tab[data-page=paipan]').click();
+    await page.waitForFunction(() => /完成排盘后即可查看/.test(document.querySelector('#toast')?.textContent || ''));
+    assert.equal(await page.locator('#page-input.active').count(), 1, '排盘前点击报告应留在录入页');
     await capture(page, profile.name, 'input');
     if (profile.name === 'mobile-390') {
       await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });

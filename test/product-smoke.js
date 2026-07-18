@@ -28,6 +28,7 @@ const insights = Product.buildInsights(chart, 'career', new Date('2026-07-16T12:
 ok(Boolean(accuracy.correctedLabel), '可信度包含真太阳时');
 ok(insights.technicalHeadline.includes('七杀格') && insights.technicalHeadline.includes('身弱'), '速览读取真实格局与强弱');
 ok(!/格|日主/.test(insights.headline), '首屏身份句已翻译为白话');
+ok(Boolean(insights.archetype) && Boolean(insights.stageHeadline), '总览提供清晰的本命角色与当前阶段标题');
 ok(insights.actions[0].text.includes('交付物') && insights.actions[0].text.includes('7 天内'), '事业主题直接给出具体七天行动');
 const otherChart = Plus.fullChart({
   year: 1988, month: 8, day: 8, hour: 12, minute: 0,

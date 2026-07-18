@@ -1,8 +1,8 @@
 {
   "name": "tianshu-static",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "private": true,
-  "description": "天枢隐私优先八字排盘（Cloudflare Pages 静态站点）",
+  "description": "隐私优先、依据可查的八字命盘报告（Cloudflare Pages 纯静态站点）",
   "scripts": {
     "build:vendor": "esbuild js/qr-entry.js --bundle --format=iife --minify --outfile=js/qr-vendor.js",
     "test:unit": "node test/regression.js && node test/figures-smoke.js && node test/product-smoke.js",

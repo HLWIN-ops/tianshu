@@ -207,9 +207,18 @@
       const tab = document.querySelector(`.tab[data-page="${page}"]`);
       if (!tab) return;
       const moduleReady = !((page === 'dayun' || page === 'read') && !I) && !(page === 'fun' && !F);
-      tab.disabled = !ready || !moduleReady;
-      tab.setAttribute('aria-disabled', String(tab.disabled));
-      tab.title = !ready ? '完成排盘后开放' : (!moduleReady ? '该静态组件未成功加载' : '');
+      const locked = !ready || !moduleReady;
+      tab.disabled = false;
+      tab.classList.toggle('locked', locked);
+      tab.setAttribute('aria-disabled', 'false');
+      tab.setAttribute('aria-label', locked ? `${tab.textContent}，生成报告后可查看` : tab.textContent);
+      tab.title = !ready ? '先生成报告即可查看' : (!moduleReady ? '该静态组件未成功加载' : '');
+    });
+    document.querySelectorAll('[data-goto="dayun"], [data-goto="read"], [data-goto="fun"]').forEach(button => {
+      const page = button.dataset.goto;
+      const moduleReady = !((page === 'dayun' || page === 'read') && !I) && !(page === 'fun' && !F);
+      button.disabled = !moduleReady;
+      button.setAttribute('aria-disabled', String(!moduleReady));
     });
   }
   function go(page, options = {}) {
@@ -539,6 +548,15 @@
       html += `<div class="bt-col bt-favor">${t}</div>`;
     });
     document.getElementById('bazi-table').innerHTML = html;
+    document.getElementById('mobile-pillar-grid').innerHTML = colDefs.map(c => {
+      const p = r.pillars[c.key];
+      return `<article class="mobile-pillar-card">
+        <header><span>${c.title}</span><small>${c.sub}</small></header>
+        <div class="mobile-pillar-gz"><b class="wx-${p.ganWuxing}">${p.ganName}</b><b class="wx-${p.zhiWuxing}">${p.zhiName}</b></div>
+        <p>${c.key === 'day' ? '日主' : p.ganTenGod} · ${p.nayin}</p>
+        <details><summary>藏干与十神</summary><div>${p.canggan.map(g => `<span>${g.gan} ${g.tenGod}</span>`).join('')}</div></details>
+      </article>`;
+    }).join('');
 
     // 真太阳时
     const sn = document.getElementById('solar-note');
@@ -588,28 +606,53 @@
     currentInsights = currentInsights || T.buildInsights(r, currentFormInput && currentFormInput.focus);
     const view = currentInsights;
     const run = view.run
-      ? `<span>当前大运 <b>${view.run.name}</b> · ${view.run.startDate} 起</span>`
-      : '<span>当前处于起运前阶段</span>';
+      ? `${view.run.name}大运 · ${view.run.startDate} 起`
+      : '当前处于起运前阶段';
+    const pillarNames = ['year', 'month', 'day', 'hour'].map(key => r.pillars[key].name);
     document.getElementById('insight-overview').innerHTML = `
-      <div class="insight-kicker">命盘速览 · ${view.focusLabel}</div>
-      <div class="insight-heading">
-        <div><h2>${view.headline}</h2><p>${view.subhead}</p></div>
-        <div class="insight-run">${run}</div>
+      <div class="focus-switch" role="group" aria-label="切换关注主题">
+        <span>这次先看</span>
+        <div>${T.FOCUS.map(item => `<button type="button" data-result-focus="${item.key}" class="${item.key === view.focus ? 'active' : ''}" aria-pressed="${item.key === view.focus}">${item.label.replace('成长', '').replace('规划', '').replace('经营', '').replace('状态', '')}</button>`).join('')}</div>
       </div>
-      <div class="insight-evidence">${view.evidence.map(item => `<span>${item}</span>`).join('')}</div>
-      <article class="action-card action-primary">
-        <span class="action-primary-kicker">未来 7 天 · 只做这一件事</span>
-        <p>${view.actions[0].text}</p>
-        <details class="action-rationale">
-          <summary>查看依据、边界与验证方法</summary>
-          <dl>
-            <div><dt>为什么</dt><dd>${view.actions[0].evidence}</dd></div>
-            <div><dt>${view.actions[1].label}</dt><dd>${view.actions[1].text}<small>${view.actions[1].evidence}</small></dd></div>
-            <div><dt>${view.actions[2].label}</dt><dd>${view.actions[2].text}<small>${view.actions[2].evidence}</small></dd></div>
-          </dl>
-        </details>
-      </article>
-      <p class="insight-disclaimer">${view.disclaimer}</p>`;
+      <div class="signal-grid">
+        <div class="signal-copy">
+          <span class="insight-kicker">你的本命底色</span>
+          <h2>${view.archetype}</h2>
+          <p>${view.headline}</p>
+          <details class="signal-basis">
+            <summary>为什么这样判断</summary>
+            <div>${view.evidence.map(item => `<span>${item}</span>`).join('')}</div>
+            <small>${view.disclaimer}</small>
+          </details>
+        </div>
+        <div class="chart-signature" aria-label="四柱命盘主视觉">
+          <div class="signature-core"><small>核心符号</small><strong class="wx-${r.dayMaster.wuxing}">${r.dayMaster.gan}</strong><span>${r.dayMaster.yinyang}${r.dayMaster.wuxing}日主</span></div>
+          <div class="signature-pillars">${pillarNames.map((name, index) => `<span><small>${['年', '月', '日', '时'][index]}</small><b>${name}</b></span>`).join('')}</div>
+        </div>
+      </div>
+      <section class="current-stage">
+        <header><span>${view.year ? view.year.year + ' 年主线' : '当前阶段'}</span><em>${run}</em></header>
+        <h3>${view.stageHeadline}</h3>
+        <p>${view.subhead}</p>
+        <dl class="stage-lines">
+          <div><dt>更值得投入</dt><dd>${view.opportunity}</dd></div>
+          <div><dt>容易卡住</dt><dd>${view.risk}</dd></div>
+        </dl>
+      </section>`;
+
+    document.querySelectorAll('[data-result-focus]').forEach(button => {
+      button.addEventListener('click', () => setResultFocus(button.dataset.resultFocus));
+    });
+  }
+
+  function setResultFocus(focus) {
+    if (!current || !currentFormInput || !T.FOCUS.some(item => item.key === focus)) return;
+    currentFormInput.focus = focus;
+    const focusControl = document.getElementById('f-focus');
+    if (focusControl) focusControl.value = focus;
+    currentInsights = T.buildInsights(current, focus);
+    renderInsightOverview(current);
+    renderReflection();
   }
 
   function renderAccuracy(r) {
@@ -800,20 +843,29 @@
     document.getElementById('btn-print').addEventListener('click', () => window.print());
     document.getElementById('btn-save-reflection').addEventListener('click', saveReflection);
     document.getElementById('btn-clear-reflection').addEventListener('click', clearReflection);
+    document.getElementById('reflection-action').addEventListener('input', event => {
+      document.getElementById('reflection-action-preview').textContent = event.target.value.trim() || '请写下一件准备验证的事。';
+    });
   }
 
   function reflectionMonth(date = new Date()) {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
   }
 
+  function reflectionCycle(date = new Date()) {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function addDays(date, days) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+  }
+
   function savedCurrentProfile() {
     if (!currentFormInput) return null;
     const signature = T.profileSignature(currentFormInput);
     return T.readProfiles(localStorage).find(profile => profile.signature === signature) || null;
-  }
-
-  function reflectionId(profile) {
-    return profile ? `${profile.id}|${reflectionMonth()}` : '';
   }
 
   function readReflections() {
@@ -824,14 +876,28 @@
   }
 
   function validReflection(item) {
-    return Boolean(item && typeof item.id === 'string' && item.id.length <= 120
-      && typeof item.profileId === 'string' && /^p_[a-zA-Z0-9_]+$/.test(item.profileId)
-      && item.id === `${item.profileId}|${item.month}`
-      && /^\d{4}-\d{2}$/.test(item.month || '')
+    if (!item || typeof item.profileId !== 'string' || !/^p_[a-zA-Z0-9_]+$/.test(item.profileId)) return false;
+    const legacyIdentity = /^\d{4}-\d{2}$/.test(item.month || '') && item.id === `${item.profileId}|${item.month}`;
+    const cycleIdentity = /^\d{4}-\d{2}-\d{2}$/.test(item.cycle || '')
+      && item.id === `${item.profileId}|${item.cycle}`
+      && Number.isFinite(Date.parse(item.startedAt)) && Number.isFinite(Date.parse(item.dueAt))
+      && Date.parse(item.dueAt) > Date.parse(item.startedAt);
+    return Boolean(typeof item.id === 'string' && item.id.length <= 120
+      && (legacyIdentity || cycleIdentity)
       && typeof item.action === 'string' && item.action.trim().length > 0 && item.action.length <= 160
       && typeof item.evidence === 'string' && item.evidence.length <= 400
       && ['planned', 'doing', 'done', 'adjusted'].includes(item.status)
       && typeof item.updatedAt === 'string' && Number.isFinite(Date.parse(item.updatedAt)));
+  }
+
+  function activeReflection(profile, records = readReflections(), now = new Date()) {
+    if (!profile) return null;
+    const nowValue = now.getTime();
+    const profileRecords = records.filter(item => item.profileId === profile.id)
+      .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+    const activeCycle = profileRecords.find(item => item.cycle
+      && Date.parse(item.startedAt) <= nowValue && nowValue <= Date.parse(item.dueAt));
+    return activeCycle || profileRecords.find(item => item.month === reflectionMonth(now)) || null;
   }
 
   function writeReflections(records) {
@@ -845,19 +911,23 @@
     const action = document.getElementById('reflection-action');
     if (!action || !currentFormInput) return;
     const profile = savedCurrentProfile();
-    const record = profile ? readReflections().find(item => item.id === reflectionId(profile)) : null;
+    const record = activeReflection(profile);
     const generatedAction = currentInsights && currentInsights.actions[0]
       ? currentInsights.actions[0].text : '从当前待办中只选一件事，写清完成标准，并在 7 天内完成第一版。';
-    action.value = record ? record.action : generatedAction;
+    const actionText = record ? record.action : generatedAction;
+    action.value = actionText;
+    document.getElementById('reflection-action-preview').textContent = actionText;
+    document.getElementById('reflection-editor').open = false;
     document.getElementById('reflection-status').value = record ? record.status : 'planned';
     document.getElementById('reflection-evidence').value = record ? record.evidence : '';
     document.getElementById('reflection-review').open = Boolean(record && (record.evidence || record.status === 'done' || record.status === 'adjusted'));
-    const start = new Date();
-    const end = new Date(start); end.setDate(start.getDate() + 7);
+    const start = record && record.startedAt ? new Date(record.startedAt) : new Date();
+    const end = record && record.dueAt ? new Date(record.dueAt) : addDays(start, 7);
     const range = `${start.getMonth() + 1}月${start.getDate()}日—${end.getMonth() + 1}月${end.getDate()}日`;
+    document.getElementById('btn-save-reflection').textContent = record ? '更新这条行动' : '保存这条行动';
     document.getElementById('reflection-month').textContent = record
-      ? `本轮 ${range} · 已于 ${new Date(record.updatedAt).toLocaleDateString('zh-CN')} 保存`
-      : `本轮 ${range} · 尚未保存`;
+      ? `${range} · 仅保存在本机`
+      : `${range} · 点击后仅保存在本机`;
   }
 
   function saveReflection() {
@@ -865,17 +935,29 @@
     const action = document.getElementById('reflection-action').value.trim();
     const evidence = document.getElementById('reflection-evidence').value.trim();
     const status = document.getElementById('reflection-status').value;
-    if (!action) { document.getElementById('reflection-action').focus(); toast('系统建议可以修改，但行动内容不能为空'); return; }
+    if (!action) { document.getElementById('reflection-editor').open = true; document.getElementById('reflection-action').focus(); toast('行动内容不能为空'); return; }
     const existingProfile = savedCurrentProfile();
     const profile = existingProfile || T.saveProfile(localStorage, currentFormInput, currentFormInput.name || '未署名命主');
     if (!profile) { toast('保存失败，请检查浏览器存储权限'); return; }
-    const record = { id: reflectionId(profile), profileId: profile.id, month: reflectionMonth(), action: action.slice(0, 160), evidence: evidence.slice(0, 400), status, updatedAt: new Date().toISOString() };
     const records = readReflections();
-    const next = [record, ...records.filter(item => item.id !== record.id)];
+    const now = new Date();
+    const existingRecord = activeReflection(profile, records, now);
+    const cycleRecord = existingRecord && existingRecord.cycle ? existingRecord : null;
+    const startedAt = cycleRecord ? cycleRecord.startedAt : now.toISOString();
+    const dueAt = cycleRecord ? cycleRecord.dueAt : addDays(now, 7).toISOString();
+    const cycle = cycleRecord ? cycleRecord.cycle : reflectionCycle(now);
+    const record = {
+      id: cycleRecord ? cycleRecord.id : `${profile.id}|${cycle}`,
+      profileId: profile.id,
+      cycle, startedAt, dueAt,
+      action: action.slice(0, 160), evidence: evidence.slice(0, 400), status, updatedAt: now.toISOString(),
+    };
+    const replacedIds = new Set([record.id, existingRecord && existingRecord.id].filter(Boolean));
+    const next = [record, ...records.filter(item => !replacedIds.has(item.id))];
     if (!writeReflections(next)) { toast('保存失败，请检查浏览器存储权限'); return; }
     if (!existingProfile) { renderRecentProfile(); }
     renderReflection();
-    toast(existingProfile ? '7 天行动已保存在当前浏览器' : '已建立本机档案并保存 7 天行动');
+    toast(existingProfile ? '本周行动已保存在当前浏览器' : '已建立本机档案并保存本周行动');
   }
 
   function clearReflection() {
@@ -883,11 +965,12 @@
     const profile = savedCurrentProfile();
     if (!profile) { renderReflection(); return; }
     const records = readReflections();
-    if (!records.some(item => item.id === reflectionId(profile))) { renderReflection(); return; }
-    if (!confirm('清除这张命盘的本月行动记录？')) return;
-    writeReflections(records.filter(item => item.id !== reflectionId(profile)));
+    const record = activeReflection(profile, records);
+    if (!record) { renderReflection(); return; }
+    if (!confirm('清除这张命盘的本周行动？')) return;
+    writeReflections(records.filter(item => item.id !== record.id));
     renderReflection();
-    toast('本月记录已清除');
+    toast('本周行动已清除');
   }
 
   function saveCurrentProfile() {
@@ -1102,7 +1185,8 @@
       });
       const importedReflections = Array.isArray(data && data.reflections) ? data.reflections.map(item => {
         const mappedId = item && profileIdMap.get(item.profileId);
-        return mappedId ? Object.assign({}, item, { profileId: mappedId, id: `${mappedId}|${item.month}` }) : null;
+        const recordKey = item && (item.cycle || item.month);
+        return mappedId && recordKey ? Object.assign({}, item, { profileId: mappedId, id: `${mappedId}|${recordKey}` }) : null;
       }).filter(validReflection).slice(0, REFLECTION_LIMIT) : [];
       if (importedReflections.length) {
         const existing = readReflections();

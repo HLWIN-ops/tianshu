@@ -9,7 +9,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '2.1.0';
+  const VERSION = '3.0.0';
   const PROFILE_KEY = 'tianshu.profiles.v1';
   const PROFILE_LIMIT = 30;
   const GAN_WX = { 甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土', 己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水' };
@@ -509,6 +509,24 @@
     neutral: '你适合先观察现实反馈，再逐步确定自己的推进方式',
   };
 
+  const ARCHETYPE = {
+    self: '自主的开路者',
+    output: '把想法做成结果的人',
+    wealth: '敏锐的资源经营者',
+    authority: '高标准的推进者',
+    resource: '系统型思考者',
+    neutral: '稳步校准的实践者',
+  };
+
+  const STAGE_HEADLINE = {
+    self: '选对同伴，也守住自己的主线',
+    output: '让作品走到台前，用反馈继续打磨',
+    wealth: '看清筹码，再决定是否加码',
+    authority: '先收边界，再交付结果',
+    resource: '把方法变成一次真实实践',
+    neutral: '用小步反馈校准方向',
+  };
+
   function pad(n) { return String(n).padStart(2, '0'); }
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -655,7 +673,8 @@
     const jiHit = year && useGod.ji && (useGod.ji.includes(yearGanWx) || useGod.ji.includes(yearZhiWx));
     const signal = xiHit && !jiHit ? '顺势' : (jiHit && !xiHit ? '审慎' : '平衡');
     const theme = year && year.tenGod ? year.tenGod : '本命结构';
-    const yearGuide = TEN_GOD_GUIDE[tenGodFamily(theme)];
+    const themeFamily = tenGodFamily(theme);
+    const yearGuide = TEN_GOD_GUIDE[themeFamily];
     const execution = TEN_GOD_EXECUTION[tenGodFamily(theme)] || TEN_GOD_EXECUTION.neutral;
     const runTheme = run ? (run.ganTenGod || run.zhiTenGod || '阶段主题') : '起运前阶段';
     const runGuide = TEN_GOD_GUIDE[tenGodFamily(runTheme)];
@@ -691,6 +710,10 @@
     return {
       focus: safeFocus,
       focusLabel: (FOCUS.find(f => f.key === safeFocus) || FOCUS[0]).label,
+      archetype: ARCHETYPE[tenGodFamily(pattern && pattern.primary)] || ARCHETYPE.neutral,
+      stageHeadline: STAGE_HEADLINE[themeFamily] || STAGE_HEADLINE.neutral,
+      opportunity: action.lead,
+      risk: action.caution,
       headline: plainIdentity(pattern, strength),
       technicalHeadline: `${day.gan}${day.wuxing}日主 · ${pattern.gridName || '格局待定'} · ${strength.level || '强弱待定'}`,
       subhead: year ? `${year.year} 年观察：${yearGuide.lead}；当前节奏以“${signal}”为宜。` : '当前年份信号待定，先以现实反馈为准。',

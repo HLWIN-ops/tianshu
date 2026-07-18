@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="天枢是一款隐私优先、算法透明的八字排盘工具，支持精确时分、真太阳时、农历互转、大运流年与本地命盘档案。">
-  <meta name="theme-color" content="#9e2b25">
+  <meta name="description" content="天枢是一份本地生成、依据可查的八字命盘报告：看懂本命底色、当前阶段与今年重点。">
+  <meta name="theme-color" content="#101311">
   <meta name="color-scheme" content="light">
   <meta property="og:title" content="天枢">
-  <meta property="og:description" content="生辰只在本机计算，排盘依据与边界清晰可查。">
+  <meta property="og:description" content="看懂本命底色、当前阶段与今年重点。生辰只在本机计算。">
   <meta property="og:type" content="website">
   <title>天枢</title>
   <!-- 使用内联 SVG 太极图标作为 favicon，全兼容方案 -->
@@ -79,16 +79,15 @@
         </svg>
         <div class="brand-text">
           <h1>天枢</h1>
-          <p>天干地支 · 阴阳五行 · 知命安身</p>
+          <p>你的命盘，此刻看懂</p>
         </div>
       </div>
       <nav class="tabs" role="tablist" aria-label="主功能">
-        <button class="tab active" role="tab" aria-selected="true" aria-controls="page-input" data-page="input">录入</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-paipan" aria-disabled="true" data-page="paipan" disabled>命盘</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-dayun" aria-disabled="true" data-page="dayun" disabled>大运</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-read" aria-disabled="true" data-page="read" disabled>解读</button>
+        <button class="tab active" role="tab" aria-selected="true" aria-controls="page-input" data-page="input">排盘</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-paipan" aria-disabled="true" data-page="paipan" disabled>报告</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-dayun" aria-disabled="true" data-page="dayun" disabled>趋势</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-read" aria-disabled="true" data-page="read" disabled>深读</button>
         <button class="tab" role="tab" aria-selected="false" aria-controls="page-archive" data-page="archive">档案</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-fun" aria-disabled="true" data-page="fun" disabled>趣味</button>
       </nav>
     </header>
 
@@ -96,11 +95,16 @@
       <!-- 录入 -->
       <section class="page active" id="page-input">
         <section class="input-hero" aria-labelledby="input-title">
-          <p class="hero-eyebrow">隐私优先 · 依据可查 · 行动可验证</p>
-          <h2 id="input-title">30 秒，看见你当下最值得做的一件事</h2>
-          <p>先给一条命盘身份、三项结构依据和一个现实行动；想深读时，再展开完整命盘。</p>
+          <p class="hero-eyebrow">TIANSHU / PERSONAL CHART</p>
+          <h2 id="input-title">看懂你的命盘，<br>找准今年的发力点</h2>
+          <p>先看本命优势、当前阶段和今年重点。专业术语全部放在判断依据里，不需要先学会命理。</p>
+          <div class="hero-output" aria-label="报告包含内容">
+            <div><span>01</span><b>本命底色</b><small>你如何发挥，也容易在哪里受压</small></div>
+            <div><span>02</span><b>当前阶段</b><small>现在更适合推进、调整还是蓄力</small></div>
+            <div><span>03</span><b>现实重点</b><small>事业、财富、关系和身心分别怎么看</small></div>
+          </div>
           <div class="hero-trust" aria-label="产品承诺">
-            <span>无需注册</span><span>浏览器本地计算</span><span>默认分享已脱敏</span>
+            <span>全程本地计算</span><span>真太阳时校准</span><span>结果依据可查</span>
           </div>
         </section>
 
@@ -114,8 +118,8 @@
         </section>
 
         <div class="privacy-banner">
-          <strong>出生资料只在本机计算</strong>
-          <span>无账号、无上传；主动保存后会以明文留在本浏览器，可随时导出或清除。</span>
+          <strong>你的生辰不会上传</strong>
+          <span>无账号、无云端数据库；只有主动保存后，才会留在当前浏览器。</span>
         </div>
 
         <form class="form" id="form" autocomplete="off" novalidate>
@@ -133,7 +137,7 @@
             <label class="check"><input type="checkbox" id="f-leap"><span>此农历月为闰月</span></label>
           </div>
 
-          <div class="grid3">
+          <div class="grid3 date-grid">
             <div class="field">
               <label id="lbl-year" for="f-year">出生年</label>
               <input type="number" id="f-year" placeholder="如 1990" min="1900" max="2100" inputmode="numeric" />
@@ -204,7 +208,7 @@
             </div>
           </details>
 
-          <div class="form-section-title"><span>4</span><div><b>排运信息</b><small>传统排运方向所需，不用于身份识别</small></div></div>
+          <div class="form-section-title"><span>4</span><div><b>这次想看什么</b><small>性别用于传统排运，关注方向只改变报告重点</small></div></div>
           <div class="field">
             <span class="field-label">性别</span>
             <div class="seg" role="radiogroup" aria-label="传统排运性别规则">
@@ -214,9 +218,9 @@
           </div>
 
           <div class="field focus-field">
-            <label for="f-focus">此刻最关心</label>
+            <label for="f-focus">优先查看</label>
             <select id="f-focus"></select>
-            <p class="hint">它会改变行动的落点，但不会改变四柱计算。</p>
+            <p class="hint">生成报告后仍可随时切换，不需要重新排盘。</p>
           </div>
 
           <details class="personalize">
@@ -233,88 +237,99 @@
           <div class="actions">
             <button type="button" class="ghost subtle" id="btn-example">载入示例</button>
             <button type="button" class="ghost" id="btn-now">用当前时刻</button>
-            <button type="submit" class="primary">开始排盘 · 看行动速览</button>
+            <button type="submit" class="primary">生成我的命盘报告</button>
           </div>
         </form>
       </section>
 
       <!-- 命盘 -->
       <section class="page" id="page-paipan">
-        <div class="insight-overview" id="insight-overview"></div>
-        <section class="reflection-card" aria-labelledby="reflection-title">
-          <header>
-            <div><span class="resume-kicker">天枢已经替你生成</span><h2 id="reflection-title">你的 7 天行动</h2></div>
-            <span class="local-badge">仅本机</span>
-          </header>
-          <p>不需要从空白开始：直接采用下方建议，或按现实情况修改后保存。7 天后再回来记录结果。</p>
-          <div class="reflection-grid">
-            <div class="field reflection-action-field">
-              <label for="reflection-action">系统建议 · 可以修改</label>
-              <textarea id="reflection-action" maxlength="160" rows="3"></textarea>
-            </div>
-            <div class="field">
-              <label for="reflection-status">7 天进度</label>
-              <select id="reflection-status">
-                <option value="planned">准备开始</option>
-                <option value="doing">正在验证</option>
-                <option value="done">已经完成</option>
-                <option value="adjusted">调整方向</option>
-              </select>
-            </div>
-          </div>
-          <details class="reflection-review" id="reflection-review">
-            <summary>7 天后回来复盘 <small>现在可以不填</small></summary>
-            <div class="field">
-              <label for="reflection-evidence">实际发生了什么</label>
-              <textarea id="reflection-evidence" maxlength="400" rows="3" placeholder="完成了吗？实际有什么变化？这条建议有用、没用，还是需要调整？"></textarea>
-            </div>
-          </details>
-          <div class="reflection-actions">
-            <span id="reflection-month"></span>
-            <button type="button" class="primary compact" id="btn-save-reflection">采用并保存</button>
-            <button type="button" class="tool-button danger" id="btn-clear-reflection">清除</button>
-          </div>
-        </section>
-        <div class="result-actions" aria-label="命盘操作">
-          <button type="button" class="tool-button" id="btn-save-current">保存到档案</button>
-          <button type="button" class="tool-button" id="btn-share-summary">分享摘要</button>
-          <button type="button" class="tool-button" id="btn-print">打印报告</button>
-          <button type="button" class="tool-button" data-goto="input">编辑资料</button>
-        </div>
-        <div class="idcard" id="idcard"></div>
-
-        <div class="accuracy-strip" id="accuracy-strip"></div>
-
-        <div class="bazi-table" id="bazi-table"></div>
-
-        <div class="chips" id="solar-note"></div>
-
-        <div class="tri">
-          <div class="tri-box">
-            <h4>神煞</h4>
-            <div id="shensha-list" class="tri-body"></div>
-          </div>
-          <div class="tri-box">
-            <h4>空亡</h4>
-            <div id="kongwang-list" class="tri-body"></div>
-          </div>
-          <div class="tri-box">
-            <h4>刑冲合害</h4>
-            <div id="relations-list" class="tri-body"></div>
+        <div class="report-topline">
+          <div><span>TIANSHU / PERSONAL REPORT</span><b>你的命盘报告</b></div>
+          <div class="result-actions" aria-label="报告操作">
+            <button type="button" class="tool-button" id="btn-save-current">保存</button>
+            <button type="button" class="tool-button" id="btn-share-summary">分享</button>
+            <button type="button" class="tool-button" id="btn-print">打印</button>
+            <button type="button" class="tool-button" data-goto="input">重排</button>
           </div>
         </div>
 
-        <section class="block">
-          <h3 class="block-title">五行力量分布</h3>
-          <div class="wx-bars" id="wx-bars"></div>
-          <p class="wx-note" id="wx-note"></p>
+        <section class="result-cockpit" aria-label="命盘总览">
+          <div class="insight-overview" id="insight-overview"></div>
+          <section class="reflection-card" aria-labelledby="reflection-title">
+            <header>
+              <div><span class="resume-kicker">本周可以试试</span><h2 id="reflection-title">把判断落到现实</h2></div>
+              <span class="local-badge">可选</span>
+            </header>
+            <p class="generated-action" id="reflection-action-preview"></p>
+            <details class="reflection-editor" id="reflection-editor">
+              <summary>这件事不适合我，调整建议</summary>
+              <div class="field reflection-action-field">
+                <label for="reflection-action">调整后的行动</label>
+                <textarea id="reflection-action" maxlength="160" rows="3"></textarea>
+              </div>
+            </details>
+            <div class="reflection-start">
+              <button type="button" class="primary compact" id="btn-save-reflection">保存这条行动</button>
+              <span id="reflection-month"></span>
+            </div>
+            <details class="reflection-review" id="reflection-review">
+              <summary>已经开始？更新进度或记录结果</summary>
+              <div class="reflection-grid">
+                <div class="field">
+                  <label for="reflection-status">当前进度</label>
+                  <select id="reflection-status">
+                    <option value="planned">准备开始</option>
+                    <option value="doing">正在验证</option>
+                    <option value="done">已经完成</option>
+                    <option value="adjusted">调整方向</option>
+                  </select>
+                </div>
+                <div class="field reflection-evidence-field">
+                  <label for="reflection-evidence">实际发生了什么</label>
+                  <textarea id="reflection-evidence" maxlength="400" rows="3" placeholder="完成了吗？实际有什么变化？"></textarea>
+                </div>
+              </div>
+              <button type="button" class="tool-button danger" id="btn-clear-reflection">清除提醒</button>
+            </details>
+          </section>
         </section>
 
-        <div class="jump">
-          <button class="ghost" data-goto="dayun">查看大运流年 →</button>
-          <button class="ghost" data-goto="read">查看命盘解读 →</button>
-          <button class="ghost" data-goto="fun">测测像谁 →</button>
-        </div>
+        <section class="report-routes" aria-labelledby="report-routes-title">
+          <div class="section-heading">
+            <span>继续探索</span>
+            <h2 id="report-routes-title">按你的问题往下看</h2>
+          </div>
+          <div class="route-grid">
+            <button type="button" data-goto="dayun"><span>01</span><b>今年与未来趋势</b><small>看当前大运、今年和接下来的时间节点</small></button>
+            <button type="button" data-goto="read"><span>02</span><b>完整命盘解读</b><small>看优势、压力模式、关系与适合的环境</small></button>
+            <button type="button" data-goto="fun"><span>03</span><b>古今人物对照</b><small>从真实盘面特征寻找相似结构</small></button>
+          </div>
+        </section>
+
+        <details class="professional-vault" id="professional-vault">
+          <summary>
+            <span><small>依据与算法</small><b>查看完整专业盘面</b></span>
+            <em>四柱 · 十神 · 五行 · 神煞 · 校时</em>
+          </summary>
+          <div class="professional-body">
+            <div class="idcard" id="idcard"></div>
+            <div class="accuracy-strip" id="accuracy-strip"></div>
+            <div class="mobile-pillar-grid" id="mobile-pillar-grid"></div>
+            <div class="bazi-table" id="bazi-table"></div>
+            <div class="chips" id="solar-note"></div>
+            <div class="tri">
+              <div class="tri-box"><h4>神煞</h4><div id="shensha-list" class="tri-body"></div></div>
+              <div class="tri-box"><h4>空亡</h4><div id="kongwang-list" class="tri-body"></div></div>
+              <div class="tri-box"><h4>刑冲合害</h4><div id="relations-list" class="tri-body"></div></div>
+            </div>
+            <section class="block">
+              <h3 class="block-title">五行力量分布</h3>
+              <div class="wx-bars" id="wx-bars"></div>
+              <p class="wx-note" id="wx-note"></p>
+            </section>
+          </div>
+        </details>
       </section>
 
       <!-- 大运 -->
@@ -356,7 +371,7 @@
       <!-- 趣味 · 古今人物相似度 -->
       <section class="page" id="page-fun">
         <div class="fun-hero">
-          <h2 class="block-title">古今人物相似度</h2>
+          <div class="fun-headline"><button type="button" class="tool-button" data-goto="paipan">返回报告</button><h2 class="block-title">古今人物相似度</h2></div>
           <p class="fun-lede">以日主、日柱、格局、喜用、十神、神煞、五行分布等维度，将你的命盘与历史人物库对照，看看气场与谁更近。</p>
         </div>
         <div class="fun-summary" id="fun-summary"></div>

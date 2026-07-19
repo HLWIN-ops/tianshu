@@ -249,17 +249,18 @@ async function saveAndReopenProfile(page, name, viewportName) {
   const previewAction = (await page.locator('#reflection-action-preview').innerText()).trim();
   assert.equal(generatedAction, previewAction, '系统应直接展示行动建议，而不是让用户从空白录入');
   assert.match(generatedAction, /7 天|7天|20 分钟|每天记录/, '系统建议应是具体可执行动作');
-  await page.locator('#reflection-editor > summary').click();
-  await page.locator('#reflection-action').fill('本月完成一个可验收的小行动');
+  await page.locator('#reflection-subject').fill('完成一个可验收的作品集首页');
+  await page.locator('#reflection-action').fill('7 天内完成一个可验收的作品集首页');
+  await page.locator('#btn-save-reflection').click();
   await page.locator('#reflection-review > summary').click();
   await page.locator('#reflection-status').selectOption('doing');
   await page.locator('#reflection-evidence').fill('先记录事实，再检查建议是否成立。');
-  await page.locator('#btn-save-reflection').click();
+  await page.locator('#btn-save-reflection-review').click();
   const reflectionRecord = await page.evaluate(() => JSON.parse(localStorage.getItem('tianshu.reflections.v1') || '[]')[0]);
-  assert.match(reflectionRecord.cycle || '', /^\d{4}-\d{2}-\d{2}$/, '行动应以具体开始日期建立周期');
-  assert.ok(Date.parse(reflectionRecord.dueAt) > Date.parse(reflectionRecord.startedAt), '行动应保存结束日期');
+  assert.match(reflectionRecord.cycle || '', /^\d{4}-\d{2}-\d{2}-[a-z0-9]{1,8}$/, '现实校验应以具体开始日期建立唯一周期');
+  assert.ok(Date.parse(reflectionRecord.dueAt) > Date.parse(reflectionRecord.startedAt), '现实校验应保存结束日期');
   const reflectionCount = await page.evaluate(() => JSON.parse(localStorage.getItem('tianshu.reflections.v1') || '[]').length);
-  assert.equal(reflectionCount, 1, '本月行动记录应保存在本机');
+  assert.equal(reflectionCount, 1, '现实校验记录应保存在本机');
   await page.locator('#btn-save-current').click();
   await page.locator('.tab[data-page=archive]').click();
   const card = page.locator('#profile-list .profile-card').first();
@@ -271,6 +272,35 @@ async function saveAndReopenProfile(page, name, viewportName) {
   });
   assert.equal(savedCount, 1, '本地档案应写入一条有效记录');
   await assertNoRootOverflow(page, `${viewportName}/archive`);
+
+  await card.locator('[data-action=reflection]').click();
+  await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
+  await page.waitForTimeout(120);
+  const resumeLayout = await page.evaluate(() => {
+    const readRect = selector => {
+      const node = document.querySelector(selector);
+      if (!node) return null;
+      const rect = node.getBoundingClientRect();
+      return { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left, width: rect.width, height: rect.height };
+    };
+    const masthead = readRect('.masthead');
+    const reflection = readRect('.reflection-card');
+    const tabs = readRect('.tabs');
+    const fields = ['#reflection-title', '#reflection-subject', '#reflection-status', '#btn-save-reflection-review']
+      .map(selector => ({ selector, rect: readRect(selector), hidden: document.querySelector(selector)?.offsetParent === null }))
+      .filter(item => item.rect && !item.hidden && item.rect.bottom > 0 && item.rect.top < window.innerHeight);
+    return { masthead, reflection, tabs, fields, viewportHeight: window.innerHeight };
+  });
+  assert.ok(resumeLayout.reflection && resumeLayout.masthead && resumeLayout.reflection.top >= resumeLayout.masthead.bottom - 1,
+    `${viewportName} 继续复盘标题不得被顶部栏遮挡：${JSON.stringify(resumeLayout)}`);
+  if (resumeLayout.tabs && resumeLayout.tabs.top < resumeLayout.viewportHeight) {
+    resumeLayout.fields.forEach(item => {
+      const overlaps = item.rect.bottom > resumeLayout.tabs.top && item.rect.top < resumeLayout.tabs.bottom;
+      assert.equal(overlaps, false, `${viewportName} ${item.selector} 不得被底部导航遮挡：${JSON.stringify(resumeLayout)}`);
+    });
+  }
+  await page.locator('.tab[data-page=archive]').click();
+  await page.locator('#page-archive.active').waitFor({ state: 'visible' });
 
   await page.locator('#f-import-profiles').setInputFiles({
     name: 'unknown-version.json',
@@ -325,7 +355,7 @@ async function saveAndReopenProfile(page, name, viewportName) {
   await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
   if (await page.locator('#professional-vault').getAttribute('open') === null) await page.locator('#professional-vault > summary').click();
   assert.match(await page.locator('#idcard').innerText(), new RegExp(name));
-  assert.equal(await page.locator('#reflection-action').inputValue(), '本月完成一个可验收的小行动', '恢复命盘时应恢复本月行动');
+  assert.equal(await page.locator('#reflection-action').inputValue(), '7 天内完成一个可验收的作品集首页', '恢复命盘时应恢复现实校验');
 
   await page.locator('.tab[data-page=input]').click();
   await page.locator('#recent-resume').waitFor({ state: 'visible' });
@@ -414,10 +444,13 @@ async function runJourney(browser, baseUrl, profile) {
     assert.equal(responseHeaders['x-content-type-options'], 'nosniff');
     await page.locator('#intro').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('#page-input.active').count(), 1, '普通访问不应被品牌开屏拦截');
-    assert.equal(await page.locator('.tab[data-page=paipan]').isDisabled(), false, '排盘前结果标签仍应可点击并给出解释');
-    await page.locator('.tab[data-page=paipan]').click();
-    await page.waitForFunction(() => /完成排盘后即可查看/.test(document.querySelector('#toast')?.textContent || ''));
-    assert.equal(await page.locator('#page-input.active').count(), 1, '排盘前点击报告应留在录入页');
+    assert.equal(await page.locator('.tab[data-page=paipan]').isDisabled(), true, '排盘前报告标签必须原生禁用');
+    assert.equal(await page.locator('.tab[data-page=paipan]').getAttribute('aria-disabled'), 'true', '排盘前报告标签必须暴露禁用状态');
+    assert.equal(await page.locator('#page-input.active').count(), 1, '排盘前应留在录入页');
+    if (profile.viewport.width <= 720) {
+      const tabsBox = await page.locator('.tabs').boundingBox();
+      assert.ok(tabsBox && tabsBox.y >= profile.viewport.height - 70, `${profile.name} 移动导航必须固定在视口底部：${JSON.stringify(tabsBox)}`);
+    }
     await capture(page, profile.name, 'input');
     if (profile.name === 'mobile-390') {
       await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
@@ -427,6 +460,9 @@ async function runJourney(browser, baseUrl, profile) {
 
     await page.goto(`${baseUrl}/?intro=1`, { waitUntil: 'load' });
     await exitIntro(page);
+    for (const id of ['#tab-paipan', '#tab-dayun', '#tab-read']) {
+      assert.equal(await page.locator(id).isDisabled(), true, `${profile.name} 排盘前结果标签必须禁用`);
+    }
     await assertNoRootOverflow(page, `${profile.name}/input`);
     await assertInvalidDate(page);
     const chartName = `E2E-${profile.name}`;

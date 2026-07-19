@@ -439,24 +439,46 @@
     overall: {
       object: '年度主线', unit: '一项可在七天内验证的小行动',
       task: '从当前待办中只选一件最重要的事，今天写下完成标准，并在 7 天内做出第一个可交付版本。',
+      subjectExample: '例如：完成作品集首页、整理家庭预算、恢复晨间散步',
+      criterion: '第 7 天能展示一个真实结果，并至少记录一条外部反馈或客观变化。',
     },
     career: {
       object: '一个可展示、可验收的职业成果', unit: '一个能被他人检验的交付节点',
       task: '选一个正在推进的任务，今天写清交付物和截止日，并在 7 天内交出第一版。',
+      subjectExample: '例如：完成作品集首页、交付项目第一版、准备一次述职',
+      criterion: '第 7 天有一个可以给别人查看的版本，并收到至少一条真实反馈。',
     },
     wealth: {
       object: '现金流安全与机会验证', unit: '一笔有上限、可复盘的小额试验',
       task: '检查最近 7 天的收支，只选一项可调整支出或小额机会，先写明金额上限再行动。',
+      subjectExample: '例如：控制外卖支出、评估一项副业、核对订阅费用',
+      criterion: '第 7 天能用金额或记录说明：继续、停止，还是调整投入上限。',
     },
     relationship: {
       object: '一段最重要关系里的具体期待', unit: '一次说清请求与边界的对话',
       task: '选一段重要关系，约一次 20 分钟对话：只表达一个具体请求，并请对方复述理解。',
+      subjectExample: '例如：和伴侣讨论家务分工、向同事说清协作边界',
+      criterion: '对方能准确复述你的请求，双方确认一个下一步或明确暂不推进。',
     },
     wellbeing: {
       object: '睡眠、饮食或运动中的一个可控变量', unit: '一个连续七天可记录的轻量习惯',
       task: '从睡眠、饮食、运动中只选一项，设定一个最低标准，连续 7 天每天记录是否完成。',
+      subjectExample: '例如：23:30 前上床、每天步行 20 分钟、减少夜宵',
+      criterion: '7 天中至少 5 天达到最低标准，并记录精力、睡眠或身体感受的变化。',
     },
   };
+
+  function experimentAction(focus, subject, execution) {
+    const target = `“${subject}”`;
+    const prefix = {
+      overall: `围绕${target}，只选一个最小结果，今天写清完成标准，并在 7 天内做出可展示版本。`,
+      career: `围绕${target}，今天写清交付物和截止日，并在 7 天内交出第一版。`,
+      wealth: `围绕${target}，先写明金额上限和停止条件，连续 7 天记录真实收支或反馈。`,
+      relationship: `围绕${target}，安排一次 20 分钟对话：只表达一个具体请求，并请对方复述理解。`,
+      wellbeing: `围绕${target}，设定一个最低标准，连续 7 天每天只记录是否完成和身体感受。`,
+    };
+    return `${prefix[focus] || prefix.overall}${execution || ''}`;
+  }
 
   const TEN_GOD_EXECUTION = {
     self: '如果涉及他人，开始前先写清各自分工。',
@@ -707,6 +729,14 @@
         evidence: `大运「${runTheme}」与流年「${theme}」共同决定观察角度；若连续四周没有现实证据，应降低这条建议的权重。`,
       },
     ];
+    const experiment = {
+      subjectExample: focusContext.subjectExample,
+      criterion: focusContext.criterion,
+      strategy: execution,
+      boundary: actions[1].text,
+      metric: actions[2].text,
+      evidence: actions[0].evidence,
+    };
     return {
       focus: safeFocus,
       focusLabel: (FOCUS.find(f => f.key === safeFocus) || FOCUS[0]).label,
@@ -721,7 +751,23 @@
       run,
       evidence,
       actions,
+      experiment,
       disclaimer: '这是基于命盘结构的年度观察清单，不是事件预言；请用现实信息验证每一步。',
+    };
+  }
+
+  function composeExperiment(insights, subject) {
+    const cleanSubject = String(subject || '').trim().slice(0, 60);
+    if (!insights || !cleanSubject) return null;
+    const experiment = insights.experiment || {};
+    return {
+      subject: cleanSubject,
+      action: experimentAction(insights.focus || 'overall', cleanSubject, experiment.strategy),
+      criterion: experiment.criterion || '第 7 天能记录一个客观结果，并据此决定保留、调整或放弃。',
+      strategy: experiment.strategy || '',
+      boundary: experiment.boundary || '',
+      metric: experiment.metric || '',
+      evidence: experiment.evidence || '',
     };
   }
 
@@ -832,7 +878,7 @@
     if (!chart || !chart.pillars) return '';
     const target = shareUrl(url);
     const lines = [
-      '天枢 · 我的年度行动速览',
+      '天枢 · 我的命盘报告',
       insights ? insights.headline : '',
       insights ? insights.subhead : '',
       insights && insights.actions[0] ? `现在做：${insights.actions[0].text}` : '',
@@ -846,7 +892,7 @@
   return {
     VERSION, PROFILE_KEY, CITIES, FOCUS,
     escapeHtml, isValidSolarDate, parseTime, zhiIndexFromMinutes, formatClock,
-    buildAccuracy, buildInsights, normalizeInput, validProfileInput, profileSignature,
+    buildAccuracy, buildInsights, composeExperiment, normalizeInput, validProfileInput, profileSignature,
     readProfiles, saveProfile, importProfilesAtomic, removeProfile, clearProfiles, shareUrl, shareText,
   };
 });

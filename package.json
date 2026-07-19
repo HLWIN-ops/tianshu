@@ -7,7 +7,8 @@
     "build:vendor": "esbuild js/qr-entry.js --bundle --format=iife --minify --outfile=js/qr-vendor.js",
     "test:unit": "node test/regression.js && node test/figures-smoke.js && node test/product-smoke.js",
     "test:e2e": "node test/e2e.js",
-    "test": "npm run test:unit && npm run test:e2e"
+    "test:file": "node test/reflection-file-e2e.js",
+    "test": "npm run test:unit && npm run test:file && npm run test:e2e"
   },
   "devDependencies": {
     "esbuild": "0.25.6",

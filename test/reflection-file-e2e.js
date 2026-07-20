@@ -81,9 +81,11 @@ async function main() {
     await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
 
     const lede = await page.locator('.reflection-lede').innerText();
-    assert.match(lede, /方向.*试了才知道.*真实要做的事.*7 天.*有用就留，没用就丢/s, '必须先用一句白话说清这是什么、试完有什么用');
+    assert.match(lede, /天枢.*本周.*7 天.*真实结果/s, '必须先说明行动由系统生成、现在能做，以及七天后如何判断');
     assert.match(await page.locator('.reflection-payoff').innerText(), /保留.*调整.*放弃/s, '未开始时也必须直接说明七天后的三种结果');
     await capture(page, 'mobile-empty-report');
+    assert.equal(await page.locator('#reflection-editor').getAttribute('open'), null, '默认态只展示生成结果，不应先让用户填写表单');
+    await page.locator('#reflection-editor > summary').click();
     await page.locator('#reflection-subject').fill('完成作品集首页并请一位同行评审');
     assert.match(await page.locator('#reflection-action').inputValue(), /作品集首页.*7 天/, '填写真实事情后应生成对应做法');
     assert.match(await page.locator('#reflection-criterion').inputValue(), /第 7 天.*反馈/, '必须给出可判断的完成标准');
@@ -137,6 +139,7 @@ async function main() {
     assert.equal(await page.locator('#btn-new-reflection').isVisible(), true, '完成复盘后才能开启下一轮');
 
     await page.locator('#btn-new-reflection').click();
+    await page.locator('#reflection-editor > summary').click();
     await page.locator('#reflection-subject').fill('完成作品集案例页初版');
     await page.locator('#btn-save-reflection').click();
     records = await page.evaluate(key => JSON.parse(localStorage.getItem(key) || '[]'), REFLECTION_KEY);

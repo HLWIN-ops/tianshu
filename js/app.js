@@ -35,6 +35,13 @@
   let reflectionDraftNew = false;
   const REFLECTION_KEY = 'tianshu.reflections.v1';
   const REFLECTION_LIMIT = 60;
+  const REFLECTION_DEFAULT_SUBJECT = {
+    overall: '交出一个能给别人看的第一版',
+    career: '完成一个可公开展示的工作成果',
+    wealth: '查清一项支出或收入机会',
+    relationship: '说清一个重要请求或边界',
+    wellbeing: '连续七天守住一个轻量习惯',
+  };
 
   // 十二时辰：value = 地支序(0子..11亥)，对应真太阳时小时起点见引擎 hourZhiFromMinutes
   const SHICHEN = [
@@ -262,6 +269,11 @@
 
   /* ===== 录入 ===== */
   function initForm() {
+    const heroStart = document.getElementById('hero-start');
+    if (heroStart) heroStart.addEventListener('click', () => {
+      const workbench = document.getElementById('input-workbench');
+      if (workbench) workbench.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     // 历法切换
     document.getElementById('cal-lunar').addEventListener('change', () => showLeap(true));
     document.getElementById('cal-solar').addEventListener('change', () => showLeap(false));
@@ -614,44 +626,50 @@
   function renderInsightOverview(r) {
     currentInsights = currentInsights || T.buildInsights(r, currentFormInput && currentFormInput.focus);
     const view = currentInsights;
+    const signalYear = view.year ? view.year.year : new Date().getFullYear();
     const run = view.run
       ? `${view.run.name}大运 · ${view.run.startDate} 起`
       : '当前处于起运前阶段';
     const pillarNames = ['year', 'month', 'day', 'hour'].map(key => r.pillars[key].name);
     document.getElementById('insight-overview').innerHTML = `
-      <div class="focus-switch" role="group" aria-label="切换关注主题">
-        <span>这次先看</span>
-        <div>${T.FOCUS.map(item => `<button type="button" data-result-focus="${item.key}" class="${item.key === view.focus ? 'active' : ''}" aria-pressed="${item.key === view.focus}">${item.label.replace('成长', '').replace('规划', '').replace('经营', '').replace('状态', '')}</button>`).join('')}</div>
+      <div class="signal-header">
+        <div class="focus-switch" role="group" aria-label="切换关注主题">
+          <span>切换频道</span>
+          <div>${T.FOCUS.map(item => `<button type="button" data-result-focus="${item.key}" class="${item.key === view.focus ? 'active' : ''}" aria-pressed="${item.key === view.focus}">${item.label}</button>`).join('')}</div>
+        </div>
+        <span class="signal-status"><i></i> 命盘已解锁</span>
       </div>
       <div class="signal-grid">
+        <div class="chart-signature" aria-label="四柱命盘主视觉">
+          <div class="signature-core"><small>你的日主</small><strong class="wx-${r.dayMaster.wuxing}">${r.dayMaster.gan}</strong><span>${r.dayMaster.yinyang}${r.dayMaster.wuxing} / ${view.archetype}</span></div>
+          <div class="signature-pillars">${pillarNames.map((name, index) => `<span><small>${['年', '月', '日', '时'][index]}</small><b>${name}</b></span>`).join('')}</div>
+        </div>
         <div class="signal-copy">
-          <span class="insight-kicker">你的本命底色</span>
-          <h2>${view.archetype}</h2>
-          <p>${view.headline}</p>
+          <span class="insight-kicker">${signalYear} / ANNUAL VERDICT</span>
+          <p class="signal-identity">你是 ${r.dayMaster.gan}${r.dayMaster.wuxing} · ${view.archetype}</p>
+          <h2>${signalYear}：${view.stageHeadline}</h2>
+          <p>${view.subhead}</p>
+          <dl class="stage-lines">
+            <div><dt>冲这里</dt><dd>${view.opportunity}</dd></div>
+            <div><dt>躲这个</dt><dd>${view.risk}</dd></div>
+          </dl>
           <details class="signal-basis">
-            <summary>为什么这样判断</summary>
+            <summary>查看判断依据</summary>
             <div>${view.evidence.map(item => `<span>${item}</span>`).join('')}</div>
             <small>${view.disclaimer}</small>
           </details>
         </div>
-        <div class="chart-signature" aria-label="四柱命盘主视觉">
-          <div class="signature-core"><small>核心符号</small><strong class="wx-${r.dayMaster.wuxing}">${r.dayMaster.gan}</strong><span>${r.dayMaster.yinyang}${r.dayMaster.wuxing}日主</span></div>
-          <div class="signature-pillars">${pillarNames.map((name, index) => `<span><small>${['年', '月', '日', '时'][index]}</small><b>${name}</b></span>`).join('')}</div>
-        </div>
       </div>
       <section class="current-stage">
-        <header><span>${view.year ? view.year.year + ' 年主线' : '当前阶段'}</span><em>${run}</em></header>
-        <h3>${view.stageHeadline}</h3>
-        <p>${view.subhead}</p>
-        <dl class="stage-lines">
-          <div><dt>更值得投入</dt><dd>${view.opportunity}</dd></div>
-          <div><dt>容易卡住</dt><dd>${view.risk}</dd></div>
-        </dl>
+        <div><span>当前阶段</span><b>${run}</b><p>${view.headline}</p></div>
+        <button type="button" class="signal-primary" data-signal-route>打开我的关键节点 <span aria-hidden="true">→</span></button>
       </section>`;
 
     document.querySelectorAll('[data-result-focus]').forEach(button => {
       button.addEventListener('click', () => setResultFocus(button.dataset.resultFocus));
     });
+    const route = document.querySelector('[data-signal-route]');
+    if (route) route.addEventListener('click', () => go('dayun'));
   }
 
   function setResultFocus(focus) {
@@ -1057,17 +1075,16 @@
 
     if (card) card.dataset.state = state;
 
-    // —— 未开始：选一件真实的事，天枢生成做法 ——
-    const subject = record ? (record.subject || '') : '';
+    // 未开始时直接给出一张完整行动卡；用户只在需要时改成自己的具体事情。
+    const defaultSubject = REFLECTION_DEFAULT_SUBJECT[(currentInsights && currentInsights.focus) || 'overall']
+      || REFLECTION_DEFAULT_SUBJECT.overall;
+    const subject = record ? (record.subject || '') : defaultSubject;
     const composed = composeFor(subject);
-    // 未填主题时，先展示当前关注方向下的通用做法，证明系统已经能给出具体建议。
     const genericAction = currentInsights && currentInsights.actions[0] ? currentInsights.actions[0].text : '';
     const draftAction = composed ? composed.action : genericAction;
-    const emptyHint = '先在上方写一件你要推进的事，天枢会把命盘建议翻成这 7 天的具体做法。';
+    const emptyHint = '天枢正在把年度信号翻成这周可以执行的一件事。';
     document.getElementById('reflection-subject').value = subject;
-    document.getElementById('reflection-subject-hint').textContent = experiment.subjectExample
-      ? `不知道怎么写？${experiment.subjectExample}`
-      : '写一句真实、具体的事就行，系统并不知道你的现实处境。';
+    document.getElementById('reflection-subject-hint').textContent = '命盘知道你的节奏，但不知道你手上的具体项目；需要时直接改这一句。';
     action.value = record ? record.action : draftAction;
     action.dataset.auto = record ? 'false' : 'true';
     document.getElementById('reflection-criterion').value = record
@@ -1076,7 +1093,7 @@
     document.getElementById('reflection-action-preview').textContent = record
       ? record.action
       : (draftAction || emptyHint);
-    document.getElementById('reflection-editor').open = !record;
+    document.getElementById('reflection-editor').open = false;
     document.getElementById('reflection-month-empty').textContent = `周期 ${reflectionRange(null, now)} · 只保存在当前浏览器，不上传`;
 
     // —— 进行中 / 已结论：当前任务与进度 ——

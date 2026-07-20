@@ -249,6 +249,7 @@ async function saveAndReopenProfile(page, name, viewportName) {
   const previewAction = (await page.locator('#reflection-action-preview').innerText()).trim();
   assert.equal(generatedAction, previewAction, '系统应直接展示行动建议，而不是让用户从空白录入');
   assert.match(generatedAction, /7 天|7天|20 分钟|每天记录/, '系统建议应是具体可执行动作');
+  await page.locator('#reflection-editor > summary').click();
   await page.locator('#reflection-subject').fill('完成一个可验收的作品集首页');
   await page.locator('#reflection-action').fill('7 天内完成一个可验收的作品集首页');
   await page.locator('#btn-save-reflection').click();

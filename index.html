@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="天枢是一份本地生成、依据可查的八字命盘报告：看懂本命底色、当前阶段与今年重点。">
-  <meta name="theme-color" content="#101311">
+  <meta name="description" content="天枢把你的出生时刻翻译成 2026 年的行动信号：今年冲哪里、躲什么、什么时候动。全程本机计算。">
+  <meta name="theme-color" content="#080a09">
   <meta name="color-scheme" content="light">
   <meta property="og:title" content="天枢">
-  <meta property="og:description" content="看懂本命底色、当前阶段与今年重点。生辰只在本机计算。">
+  <meta property="og:description" content="看见你的 2026 行动信号。生辰只在本机计算。">
   <meta property="og:type" content="website">
-  <title>天枢</title>
+  <title>天枢 · 你的 2026 行动信号</title>
   <!-- 使用内联 SVG 太极图标作为 favicon，全兼容方案 -->
   <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;-64 -64 128 128&quot;&gt;&lt;circle r=&quot;64&quot; fill=&quot;%23f5e6c8&quot;/&gt;&lt;path d=&quot;M0,-64A64,64 0 0,1 0,64Z&quot; fill=&quot;%23dfb95a&quot;/&gt;&lt;circle cx=&quot;0&quot; cy=&quot;-32&quot; r=&quot;32&quot; fill=&quot;%23dfb95a&quot;/&gt;&lt;circle cx=&quot;0&quot; cy=&quot;32&quot; r=&quot;32&quot; fill=&quot;%23f5e6c8&quot;/&gt;&lt;circle cx=&quot;0&quot; cy=&quot;-32&quot; r=&quot;8&quot; fill=&quot;%23f5e6c8&quot;/&gt;&lt;circle cx=&quot;0&quot; cy=&quot;32&quot; r=&quot;8&quot; fill=&quot;%23dfb95a&quot;/&gt;&lt;circle r=&quot;64&quot; fill=&quot;none&quot; stroke=&quot;%23dfb95a&quot; stroke-width=&quot;2&quot;/&gt;&lt;/svg&gt;">
   <link rel="apple-touch-icon" href="data:image/svg+xml,&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;-64 -64 128 128&quot;&gt;&lt;rect x=&quot;-64&quot; y=&quot;-64&quot; width=&quot;128&quot; height=&quot;128&quot; rx=&quot;24&quot; fill=&quot;%239e2b25&quot;/&gt;&lt;circle r=&quot;52&quot; fill=&quot;%23f5e6c8&quot;/&gt;&lt;path d=&quot;M0,-52A52,52 0 0,1 0,52Z&quot; fill=&quot;%23dfb95a&quot;/&gt;&lt;circle cx=&quot;0&quot; cy=&quot;-26&quot; r=&quot;26&quot; fill=&quot;%23dfb95a&quot;/&gt;&lt;circle cx=&quot;0&quot; cy=&quot;26&quot; r=&quot;26&quot; fill=&quot;%23f5e6c8&quot;/&gt;&lt;circle cx=&quot;0&quot; cy=&quot;-26&quot; r=&quot;6&quot; fill=&quot;%23f5e6c8&quot;/&gt;&lt;circle cx=&quot;0&quot; cy=&quot;26&quot; r=&quot;6&quot; fill=&quot;%23dfb95a&quot;/&gt;&lt;/svg&gt;">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/redesign.css">
 </head>
 <body>
   <!-- 进场：太极八卦开屏 -->
@@ -68,26 +69,18 @@
   <div class="shell">
     <header class="masthead">
       <div class="brand">
-        <svg class="taiji" viewBox="-52 -52 104 104" aria-hidden="true">
-          <circle r="48" fill="currentColor"/>
-          <path d="M0,-48 A48,48 0 0,1 0,48 Z" fill="var(--paper)"/>
-          <circle cx="0" cy="-24" r="24" fill="currentColor"/>
-          <circle cx="0" cy="24" r="24" fill="var(--paper)"/>
-          <circle cx="0" cy="-24" r="6" fill="var(--paper)"/>
-          <circle cx="0" cy="24" r="6" fill="currentColor"/>
-          <circle r="48" fill="none" stroke="currentColor" stroke-width="1"/>
-        </svg>
+        <span class="brand-mark" aria-hidden="true"><i></i><b>枢</b></span>
         <div class="brand-text">
           <h1>天枢</h1>
-          <p>你的命盘，此刻看懂</p>
+          <p>DESTINY IN MOTION</p>
         </div>
       </div>
       <nav class="tabs" role="tablist" aria-label="主功能">
-        <button class="tab active" role="tab" aria-selected="true" aria-controls="page-input" data-page="input">排盘</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-paipan" aria-disabled="true" data-page="paipan" disabled>报告</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-dayun" aria-disabled="true" data-page="dayun" disabled>趋势</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-read" aria-disabled="true" data-page="read" disabled>深读</button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="page-archive" data-page="archive">档案</button>
+        <button class="tab active" role="tab" aria-selected="true" aria-controls="page-input" data-page="input">开盘</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-paipan" aria-disabled="true" data-page="paipan" disabled>2026</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-dayun" aria-disabled="true" data-page="dayun" disabled>时间</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-read" aria-disabled="true" data-page="read" disabled>本命</button>
+        <button class="tab" role="tab" aria-selected="false" aria-controls="page-archive" data-page="archive">我的</button>
       </nav>
     </header>
 
@@ -95,18 +88,28 @@
       <!-- 录入 -->
       <section class="page active" id="page-input">
         <section class="input-hero" aria-labelledby="input-title">
-          <p class="hero-eyebrow">TIANSHU / PERSONAL CHART</p>
-          <h2 id="input-title">看懂你的命盘，<br>找准今年的发力点</h2>
-          <p>先看本命优势、当前阶段和今年重点。专业术语全部放在判断依据里，不需要先学会命理。</p>
-          <div class="hero-output" aria-label="报告包含内容">
-            <div><span>01</span><b>本命底色</b><small>你如何发挥，也容易在哪里受压</small></div>
-            <div><span>02</span><b>当前阶段</b><small>现在更适合推进、调整还是蓄力</small></div>
-            <div><span>03</span><b>现实重点</b><small>事业、财富、关系和身心分别怎么看</small></div>
+          <picture class="hero-device" aria-hidden="true">
+            <source srcset="images/destiny-device.webp" type="image/webp">
+            <img src="images/首页.png" alt="" width="1675" height="941">
+          </picture>
+          <div class="hero-copy">
+            <p class="hero-eyebrow"><span>2026</span> PERSONAL SIGNAL</p>
+            <h2 id="input-title">哪股运，<br>正在推着你走？</h2>
+            <p>把出生时刻翻译成一句年度判断：今年冲哪里、躲什么、什么时候动。</p>
+            <div class="hero-actions">
+              <button type="button" class="hero-cta" id="hero-start">解锁我的 2026 <span aria-hidden="true">→</span></button>
+              <button type="button" class="hero-link" data-goto="archive">打开我的命盘</button>
+            </div>
           </div>
-          <div class="hero-trust" aria-label="产品承诺">
-            <span>全程本地计算</span><span>真太阳时校准</span><span>结果依据可查</span>
-          </div>
+          <div class="hero-proof" aria-label="本地计算说明"><b>LOCAL ONLY</b><span>生辰只在你的设备计算，不上传</span></div>
+          <div class="hero-index" aria-hidden="true"><span>天干 / 地支</span><b>10 : 12</b></div>
         </section>
+
+        <section class="input-workbench" id="input-workbench" aria-labelledby="workbench-title">
+          <header class="workbench-head">
+            <span>OPEN YOUR CHART</span>
+            <div><h2 id="workbench-title">输入你的出生坐标</h2><p>四项基础信息，约 30 秒完成。</p></div>
+          </header>
 
         <section class="recent-resume" id="recent-resume" hidden aria-labelledby="recent-title">
           <div>
@@ -118,13 +121,13 @@
         </section>
 
         <div class="privacy-banner">
-          <strong>你的生辰不会上传</strong>
-          <span>无账号、无云端数据库；只有主动保存后，才会留在当前浏览器。</span>
+          <strong>本机计算</strong>
+          <span>不上传、不建账号；只有你主动保存，命盘才会留在当前浏览器。</span>
         </div>
 
         <form class="form" id="form" autocomplete="off" novalidate>
-          <div class="form-section-title"><span>1</span><div><b>出生日期</b><small>用于确定年柱、月柱与日柱</small></div></div>
-          <div class="field">
+          <div class="form-section-title"><span>01</span><div><b>出生日期</b><small>公历或农历</small></div></div>
+          <div class="field calendar-field">
             <span class="field-label">历法</span>
             <div class="seg" role="radiogroup" aria-label="历法">
               <label><input type="radio" name="cal" value="solar" id="cal-solar" checked><span>公历</span></label>
@@ -152,8 +155,8 @@
             </div>
           </div>
 
-          <div class="form-section-title"><span>2</span><div><b>出生时间</b><small>不知道分钟也可以按时辰估算</small></div></div>
-          <div class="field">
+          <div class="form-section-title"><span>02</span><div><b>出生时间</b><small>不知道分钟，也可以选时辰</small></div></div>
+          <div class="field time-mode-field">
             <span class="field-label">时间精度</span>
             <div class="seg" role="radiogroup" aria-label="时间精度">
               <label><input type="radio" name="timePrecision" value="exact" checked><span>精确时分</span></label>
@@ -173,8 +176,8 @@
             <p class="hint"><span id="shi-range"></span><span id="shi-solar"></span></p>
           </div>
 
-          <div class="form-section-title"><span>3</span><div><b>出生地点</b><small>用于真太阳时校正；支持手动经度</small></div></div>
-          <div class="field">
+          <div class="form-section-title"><span>03</span><div><b>出生地点</b><small>用于真太阳时校正</small></div></div>
+          <div class="field city-field">
             <label for="f-city">出生城市</label>
             <select id="f-city">
               <option value="">未确认 · 暂按东经 120°</option>
@@ -183,7 +186,7 @@
           </div>
 
           <details class="advanced">
-            <summary>高级 · 真太阳时 / 子时规则</summary>
+            <summary>校准设置 · 真太阳时 / 子时规则</summary>
             <div class="grid3">
               <div class="field">
                 <label for="f-lon">出生经度</label>
@@ -208,8 +211,8 @@
             </div>
           </details>
 
-          <div class="form-section-title"><span>4</span><div><b>这次想看什么</b><small>性别用于传统排运，关注方向只改变报告重点</small></div></div>
-          <div class="field">
+          <div class="form-section-title"><span>04</span><div><b>这次最想看什么</b><small>先把你最在意的放到前面</small></div></div>
+          <div class="field gender-field">
             <span class="field-label">性别</span>
             <div class="seg" role="radiogroup" aria-label="传统排运性别规则">
               <label><input type="radio" name="gender" value="male" checked><span>男 · 乾造</span></label>
@@ -218,9 +221,9 @@
           </div>
 
           <div class="field focus-field">
-            <label for="f-focus">优先查看</label>
+            <label for="f-focus">我的关注点</label>
             <select id="f-focus"></select>
-            <p class="hint">生成报告后仍可随时切换，不需要重新排盘。</p>
+            <p class="hint">生成后可以随时切换，不用重新填写。</p>
           </div>
 
           <details class="personalize">
@@ -237,20 +240,21 @@
           <div class="actions">
             <button type="button" class="ghost subtle" id="btn-example">载入示例</button>
             <button type="button" class="ghost" id="btn-now">用当前时刻</button>
-            <button type="submit" class="primary">生成我的命盘报告</button>
+            <button type="submit" class="primary">解锁我的 2026 <span aria-hidden="true">→</span></button>
           </div>
         </form>
+        </section>
       </section>
 
       <!-- 命盘 -->
       <section class="page" id="page-paipan">
         <div class="report-topline">
-          <div><span>TIANSHU / PERSONAL REPORT</span><b>你的命盘报告</b></div>
+          <div><span>YOUR SIGNAL IS READY</span><b>你的 2026 行动信号</b></div>
           <div class="result-actions" aria-label="报告操作">
-            <button type="button" class="tool-button" id="btn-save-current">保存</button>
+            <button type="button" class="tool-button" id="btn-save-current">存档</button>
             <button type="button" class="tool-button" id="btn-share-summary">分享</button>
             <button type="button" class="tool-button" id="btn-print">打印</button>
-            <button type="button" class="tool-button" data-goto="input">重排</button>
+            <button type="button" class="tool-button" data-goto="input">重开</button>
           </div>
         </div>
 
@@ -258,49 +262,49 @@
           <div class="insight-overview" id="insight-overview"></div>
           <section class="reflection-card" id="reflection-card" aria-labelledby="reflection-title" data-state="empty">
             <header class="reflection-head">
-              <div><span class="resume-kicker">可选 · 只保存在当前浏览器</span><h2 id="reflection-title">先试 7 天，再决定信不信</h2></div>
-              <span class="local-badge">本地保存</span>
+              <div><span class="resume-kicker">7 DAY ACTION CARD</span><h2 id="reflection-title">这周，只做这一件</h2></div>
+              <span class="local-badge">已替你生成</span>
             </header>
 
             <!-- 未开始：这是什么、有什么用 -->
             <div class="reflection-stage" data-stage="empty">
-              <p class="reflection-lede">命理只负责给方向，适不适合你要试了才知道。挑一件你这周真实要做的事，照着建议做 7 天，再回头看事实——有用就留，没用就丢，不用盲目照做。</p>
-              <ol class="reflection-loop" aria-label="怎么试">
-                <li><i>1</i><div><b>选一件真实的事</b><span>你这周本来就想推进的那件</span></div></li>
-                <li><i>2</i><div><b>照着做 7 天</b><span>天枢把建议翻成具体做法</span></div></li>
-                <li><i>3</i><div><b>看事实下结论</b><span>只认发生的事，不凭感觉</span></div></li>
-              </ol>
-              <div class="reflection-payoff" aria-label="七天之后能得到什么">
-                <span>7 天后，你会得到一个明确结论</span>
-                <div class="reflection-payoff-options">
-                  <b><i>✓ 有用</i>保留，接着用</b>
-                  <b><i>◐ 要调整</i>换个做法再试</b>
-                  <b><i>✗ 不贴合</i>放弃，不再参考</b>
-                </div>
-              </div>
-              <div class="field reflection-subject-field">
-                <label for="reflection-subject">你这周想推进的一件事</label>
-                <input type="text" id="reflection-subject" maxlength="60" placeholder="写一件真实、具体的事，例如：完成作品集首页">
-                <p class="hint" id="reflection-subject-hint"></p>
-              </div>
+              <p class="reflection-lede">天枢已经根据你的命盘和关注点，选出一件本周就能开始的事。直接用；7 天后只按真实结果判断。</p>
               <div class="generated-action-wrap">
-                <span>天枢建议这样做</span>
+                <span>THIS WEEK / 只做这一件</span>
                 <p class="generated-action" id="reflection-action-preview"></p>
               </div>
-              <details class="reflection-editor" id="reflection-editor" open>
-                <summary>做法不合适？点这里改</summary>
+              <details class="reflection-editor" id="reflection-editor">
+                <summary>不合适？改成我正在做的事</summary>
+                <div class="field reflection-subject-field">
+                  <label for="reflection-subject">我现在想推进</label>
+                  <input type="text" id="reflection-subject" maxlength="60" placeholder="例如：完成作品集首页">
+                  <p class="hint" id="reflection-subject-hint"></p>
+                </div>
                 <div class="field reflection-action-field">
-                  <label for="reflection-action">这 7 天具体做什么</label>
+                  <label for="reflection-action">这 7 天这样做</label>
                   <textarea id="reflection-action" maxlength="160" rows="3"></textarea>
                 </div>
                 <div class="field reflection-criterion-field">
-                  <label for="reflection-criterion">做到什么程度算有结果</label>
+                  <label for="reflection-criterion">做到这里就算完成</label>
                   <textarea id="reflection-criterion" maxlength="180" rows="2"></textarea>
                 </div>
               </details>
               <div class="reflection-start">
-                <button type="button" class="primary" id="btn-save-reflection">开始 7 天试做</button>
+                <button type="button" class="primary" id="btn-save-reflection">就做这件事 <span aria-hidden="true">→</span></button>
                 <span id="reflection-month-empty"></span>
+              </div>
+              <ol class="reflection-loop" aria-label="怎么使用这张行动卡">
+                <li><i>NOW</i><div><b>今天</b><span>定下一个可交付结果</span></div></li>
+                <li><i>D3</i><div><b>第 3 天</b><span>让一个真实的人看见</span></div></li>
+                <li><i>D7</i><div><b>第 7 天</b><span>按反馈决定下一步</span></div></li>
+              </ol>
+              <div class="reflection-payoff" aria-label="七天之后能得到什么">
+                <span>7 天后只做一个决定</span>
+                <div class="reflection-payoff-options">
+                  <b><i>KEEP</i>有效，保留</b>
+                  <b><i>TUNE</i>调整，再试</b>
+                  <b><i>DROP</i>不合适，放弃</b>
+                </div>
               </div>
             </div>
 
@@ -328,7 +332,7 @@
 
             <!-- 复盘：到期自动展开 -->
             <details class="reflection-review" id="reflection-review">
-              <summary>记下事实，得出这条建议的结论</summary>
+              <summary>记录事实 / 更新进度</summary>
               <div class="reflection-grid">
                 <div class="field">
                   <label for="reflection-status">这条建议对你</label>
@@ -354,10 +358,10 @@
             <div class="reflection-outcome" id="reflection-outcome" hidden>
               <span id="reflection-outcome-label">本轮结论</span><strong id="reflection-outcome-title"></strong><p id="reflection-outcome-text"></p>
             </div>
-            <button type="button" class="primary" id="btn-new-reflection" hidden>再试一件事</button>
+            <button type="button" class="primary" id="btn-new-reflection" hidden>生成下一张行动卡</button>
 
             <details class="reflection-evidence" id="reflection-evidence-detail">
-              <summary>这条建议是怎么来的</summary>
+              <summary>为什么生成这张卡</summary>
               <dl>
                 <div><dt>命盘策略</dt><dd id="reflection-strategy"></dd></div>
                 <div><dt>需要守住</dt><dd id="reflection-boundary"></dd></div>
@@ -370,19 +374,19 @@
 
         <section class="report-routes" aria-labelledby="report-routes-title">
           <div class="section-heading">
-            <span>继续探索</span>
-            <h2 id="report-routes-title">按你的问题往下看</h2>
+            <span>GO DEEPER</span>
+            <h2 id="report-routes-title">接下来，你想看哪一面？</h2>
           </div>
           <div class="route-grid">
-            <button type="button" data-goto="dayun"><span>01</span><b>今年与未来趋势</b><small>看当前大运、今年和接下来的时间节点</small></button>
-            <button type="button" data-goto="read"><span>02</span><b>完整命盘解读</b><small>看优势、压力模式、关系与适合的环境</small></button>
-            <button type="button" data-goto="fun"><span>03</span><b>古今人物对照</b><small>从真实盘面特征寻找相似结构</small></button>
+            <button type="button" data-goto="dayun"><span>01</span><b>什么时候动</b><small>看今年真正值得注意的时间节点</small></button>
+            <button type="button" data-goto="read"><span>02</span><b>我的底牌</b><small>看优势、惯性盲点和适合的环境</small></button>
+            <button type="button" data-goto="fun"><span>03</span><b>谁和我同频</b><small>看看哪些真实人物与你有相似结构</small></button>
           </div>
         </section>
 
         <details class="professional-vault" id="professional-vault">
           <summary>
-            <span><small>依据与算法</small><b>查看完整专业盘面</b></span>
+            <span><small>RAW CHART / 依据可查</small><b>命盘原始数据</b></span>
             <em>四柱 · 十神 · 五行 · 神煞 · 校时</em>
           </summary>
           <div class="professional-body">
@@ -427,16 +431,17 @@
       <section class="page" id="page-archive">
         <div class="archive-head">
           <div>
-            <h2 class="block-title">本地命盘档案</h2>
-            <p>资料只保存在当前浏览器。导出的 JSON 含完整出生信息，请自行妥善保管。</p>
+            <span class="archive-kicker">MY CHARTS</span>
+            <h2 class="block-title">我的命盘</h2>
+            <p>你的命盘与行动记录都只留在这台设备。</p>
           </div>
-          <span class="local-badge">本机存储</span>
+          <span class="local-badge">LOCAL ONLY</span>
         </div>
         <div class="archive-actions">
-          <button type="button" class="tool-button" id="btn-export-profiles">导出档案</button>
-          <label class="tool-button file-button" for="f-import-profiles">导入档案</label>
+          <button type="button" class="tool-button" id="btn-export-profiles">导出</button>
+          <label class="tool-button file-button" for="f-import-profiles">导入</label>
           <input type="file" id="f-import-profiles" accept="application/json,.json" hidden>
-          <button type="button" class="tool-button danger" id="btn-clear-profiles">清空档案</button>
+          <button type="button" class="tool-button danger" id="btn-clear-profiles">清空</button>
         </div>
         <div class="profile-list" id="profile-list"></div>
       </section>
@@ -444,8 +449,8 @@
       <!-- 趣味 · 古今人物相似度 -->
       <section class="page" id="page-fun">
         <div class="fun-hero">
-          <div class="fun-headline"><button type="button" class="tool-button" data-goto="paipan">返回报告</button><h2 class="block-title">古今人物相似度</h2></div>
-          <p class="fun-lede">以日主、日柱、格局、喜用、十神、神煞、五行分布等维度，将你的命盘与历史人物库对照，看看气场与谁更近。</p>
+          <div class="fun-headline"><button type="button" class="tool-button" data-goto="paipan">返回 2026</button><h2 class="block-title">谁和你同频？</h2></div>
+          <p class="fun-lede">从真实命盘结构里找相似的人。不是“你等于谁”，而是看看你们共享了哪些底层倾向。</p>
         </div>
         <div class="fun-summary" id="fun-summary"></div>
         <div class="fun-filters" id="fun-filters"></div>

@@ -400,11 +400,11 @@
   ];
 
   const FOCUS = [
-    { key: 'overall', label: '整体节奏' },
-    { key: 'career', label: '事业成长' },
-    { key: 'wealth', label: '财务规划' },
-    { key: 'relationship', label: '关系经营' },
-    { key: 'wellbeing', label: '身心状态' },
+    { key: 'overall', label: '整体' },
+    { key: 'career', label: '搞事业' },
+    { key: 'wealth', label: '搞钱' },
+    { key: 'relationship', label: '感情' },
+    { key: 'wellbeing', label: '状态' },
   ];
 
   const FOCUS_ACTIONS = {

@@ -81,8 +81,9 @@ async function main() {
     await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
 
     const lede = await page.locator('.reflection-lede').innerText();
-    assert.match(lede, /天枢.*本周.*7 天.*真实结果/s, '必须先说明行动由系统生成、现在能做，以及七天后如何判断');
+    assert.match(lede, /不用先懂命理.*7 天任务.*今天.*第 3 天.*第 7 天.*真实结果/s, '必须直接说明用户今天做什么、何时检查，以及七天后如何判断');
     assert.match(await page.locator('.reflection-payoff').innerText(), /保留.*调整.*放弃/s, '未开始时也必须直接说明七天后的三种结果');
+    assert.match(await page.locator('#reflection-criterion-preview').innerText(), /第 7 天.*结果|反馈|记录/s, '默认卡面必须直接显示怎样才算完成');
     await capture(page, 'mobile-empty-report');
     assert.equal(await page.locator('#reflection-editor').getAttribute('open'), null, '默认态只展示生成结果，不应先让用户填写表单');
     await page.locator('#reflection-editor > summary').click();

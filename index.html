@@ -262,16 +262,20 @@
           <div class="insight-overview" id="insight-overview"></div>
           <section class="reflection-card" id="reflection-card" aria-labelledby="reflection-title" data-state="empty">
             <header class="reflection-head">
-              <div><span class="resume-kicker">7 DAY ACTION CARD</span><h2 id="reflection-title">这周，只做这一件</h2></div>
-              <span class="local-badge">已替你生成</span>
+              <div><span class="resume-kicker">本周行动计划</span><h2 id="reflection-title">本周行动：按这件事做 7 天</h2></div>
+              <span class="local-badge">可以直接照做</span>
             </header>
 
             <!-- 未开始：这是什么、有什么用 -->
             <div class="reflection-stage" data-stage="empty">
-              <p class="reflection-lede">天枢已经根据你的命盘和关注点，选出一件本周就能开始的事。直接用；7 天后只按真实结果判断。</p>
+              <p class="reflection-lede">不用先懂命理。下面就是你的 7 天任务：今天开始做，第 3 天检查进度，第 7 天根据真实结果决定是否继续。</p>
               <div class="generated-action-wrap">
-                <span>THIS WEEK / 只做这一件</span>
+                <span>你这周具体要做</span>
                 <p class="generated-action" id="reflection-action-preview"></p>
+                <div class="generated-criterion-wrap">
+                  <span>做到什么算完成</span>
+                  <p id="reflection-criterion-preview"></p>
+                </div>
               </div>
               <details class="reflection-editor" id="reflection-editor">
                 <summary>不合适？改成我正在做的事</summary>
@@ -290,16 +294,16 @@
                 </div>
               </details>
               <div class="reflection-start">
-                <button type="button" class="primary" id="btn-save-reflection">就做这件事 <span aria-hidden="true">→</span></button>
+                <button type="button" class="primary" id="btn-save-reflection">开始这项 7 天任务 <span aria-hidden="true">→</span></button>
                 <span id="reflection-month-empty"></span>
               </div>
               <ol class="reflection-loop" aria-label="怎么使用这张行动卡">
-                <li><i>NOW</i><div><b>今天</b><span>定下一个可交付结果</span></div></li>
-                <li><i>D3</i><div><b>第 3 天</b><span>让一个真实的人看见</span></div></li>
-                <li><i>D7</i><div><b>第 7 天</b><span>按反馈决定下一步</span></div></li>
+                <li><i>今天</i><div><b>开始第一步</b><span>写清要交付什么，并立刻动手</span></div></li>
+                <li><i>第 3 天</i><div><b>检查进度</b><span>拿出第一版，让一个真实的人看</span></div></li>
+                <li><i>第 7 天</i><div><b>看结果</b><span>根据反馈决定继续、调整或停止</span></div></li>
               </ol>
               <div class="reflection-payoff" aria-label="七天之后能得到什么">
-                <span>7 天后只做一个决定</span>
+                <span>第 7 天，你只需要做一个决定</span>
                 <div class="reflection-payoff-options">
                   <b><i>KEEP</i>有效，保留</b>
                   <b><i>TUNE</i>调整，再试</b>

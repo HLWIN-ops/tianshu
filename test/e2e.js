@@ -197,7 +197,23 @@ async function checkTabsAndPoster(page, viewportName) {
     await page.locator(`.tab[data-page=${tab}]`).click();
     await page.locator(`#page-${tab}.active`).waitFor({ state: 'visible' });
     await page.locator(content).first().waitFor({ state: 'visible' });
+    if (tab === 'dayun') {
+      assert.ok((await page.locator('#dayun-timeline .tl-preview').first().innerText()).trim().length > 8, '大运折叠态必须直接显示运势摘要');
+      assert.match(await page.locator('#dayun-timeline .tl-toggle-label').first().innerText(), /查看.*建议/, '大运卡必须用文字说明可以查看建议');
+      const currentRun = page.locator('#dayun-timeline .tl-card.active');
+      if (await currentRun.count()) {
+        assert.equal(await currentRun.first().getAttribute('aria-expanded'), 'true', '当前大运必须默认展开');
+        assert.equal(await currentRun.first().locator('.tl-detail').isVisible(), true, '当前大运必须直接显示行动建议');
+      }
+    }
+    if (tab === 'read') {
+      const collapsedPreview = page.locator('#read-content .read-card-preview:not([hidden])').first();
+      await collapsedPreview.waitFor({ state: 'visible' });
+      assert.ok((await collapsedPreview.innerText()).trim().length > 8, '本命折叠章节必须显示内容摘要，不能只留空白标题');
+    }
     await assertNoRootOverflow(page, `${viewportName}/${tab}`);
+    if (CAPTURE_SCREENSHOTS) await page.waitForTimeout(260);
+    await capture(page, viewportName, tab);
   }
 
   await page.locator('.tab[data-page=paipan]').focus();
@@ -249,6 +265,8 @@ async function saveAndReopenProfile(page, name, viewportName) {
   const previewAction = (await page.locator('#reflection-action-preview').innerText()).trim();
   assert.equal(generatedAction, previewAction, '系统应直接展示行动建议，而不是让用户从空白录入');
   assert.match(generatedAction, /7 天|7天|20 分钟|每天记录/, '系统建议应是具体可执行动作');
+  assert.match(generatedAction, /从当前待办中选最重要的一件.*第一版.*发给一个人/s, '默认整体任务必须明确告诉用户选什么、产出什么、交给谁');
+  assert.ok((await page.locator('#reflection-criterion-preview').innerText()).trim().length > 12, '行动卡必须直接显示完成标准');
   await page.locator('#reflection-editor > summary').click();
   await page.locator('#reflection-subject').fill('完成一个可验收的作品集首页');
   await page.locator('#reflection-action').fill('7 天内完成一个可验收的作品集首页');

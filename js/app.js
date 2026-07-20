@@ -36,11 +36,11 @@
   const REFLECTION_KEY = 'tianshu.reflections.v1';
   const REFLECTION_LIMIT = 60;
   const REFLECTION_DEFAULT_SUBJECT = {
-    overall: '交出一个能给别人看的第一版',
-    career: '完成一个可公开展示的工作成果',
-    wealth: '查清一项支出或收入机会',
-    relationship: '说清一个重要请求或边界',
-    wellbeing: '连续七天守住一个轻量习惯',
+    overall: '从当前待办中选最重要的一件，做出第一版并发给一个人',
+    career: '把手上最重要的工作做成可展示的第一版',
+    wealth: '检查最近 7 天账单，处理一项非必要支出',
+    relationship: '约最重要的人聊 20 分钟，说清一个具体请求',
+    wellbeing: '连续 7 天每天步行 20 分钟并记录完成情况',
   };
 
   // 十二时辰：value = 地支序(0子..11亥)，对应真太阳时小时起点见引擎 hourZhiFromMinutes
@@ -719,22 +719,35 @@
     const xi = r.useGod.xi, ji = r.useGod.ji;
     const dayZhi = r.pillars.day.zhiName;
     const ctx = { dayZhi, relations: P.relations };
+    let curRun = null;
+    const now = Date.now();
+    dy.runs.forEach((d, index) => {
+      const start = new Date(d.startDate + 'T00:00:00').getTime();
+      const next = dy.runs[index + 1] ? new Date(dy.runs[index + 1].startDate + 'T00:00:00').getTime() : Infinity;
+      if (now >= start && now < next) curRun = d;
+    });
+    if (curRun) {
+      document.getElementById('dayun-intro').innerHTML +=
+        `　·　当前行 <b>${curRun.ganName}${curRun.zhiName}</b> 运（${curRun.startDate} 起）`;
+    }
     document.getElementById('dayun-timeline').innerHTML = dy.runs.map((d, i) => {
       const isXi = xi.includes(d.ganWuxing) || xi.includes(d.zhiWuxing);
       const isJi = ji.includes(d.ganWuxing) || ji.includes(d.zhiWuxing);
+      const isCurrentRun = Boolean(curRun && curRun.startDate === d.startDate);
       const tag = isXi ? '<span class="dun-tag xi">喜</span>' : (isJi ? '<span class="dun-tag ji">忌</span>' : '');
       const rd = I.genStageReading(d, r.useGod, ctx);
       // 展开只显示运势要点 + 宜做，不粘贴十神词典（词典在解读附录）
       return `<div class="tl-item">
         <div class="tl-node"></div>
-        <div class="tl-card" data-dayun="${i}" role="button" tabindex="0">
+        <div class="tl-card${isCurrentRun ? ' active open' : ''}" data-dayun="${i}" role="button" tabindex="0" aria-expanded="${isCurrentRun}">
           <div class="tl-age">${d.startAge}岁${d.startMonths ? d.startMonths + '个月' : ''}起 · ${d.startDate}</div>
           <div class="tl-gz"><span class="wx-${d.ganWuxing}">${d.ganName}</span><span class="wx-${d.zhiWuxing}">${d.zhiName}</span>${tag}
             <span class="lv-pill ${rd.levelCls}">${rd.level}</span>
           </div>
           <div class="tl-shen">${d.ganTenGod} · ${d.zhiTenGod}</div>
-          <div class="tl-detail" hidden>
-            <p class="tl-tone">${rd.summary}</p>
+          <p class="tl-preview">${rd.summary}</p>
+          <span class="tl-toggle-label">${isCurrentRun ? '收起建议' : '查看这步运的建议'}</span>
+          <div class="tl-detail"${isCurrentRun ? '' : ' hidden'}>
             <p><b>宜</b>：${rd.action}${rd.relNote ? ' · ' + rd.relNote : ''}</p>
           </div>
         </div>
@@ -746,24 +759,15 @@
         const det = card.querySelector('.tl-detail');
         det.hidden = !det.hidden;
         card.classList.toggle('open', !det.hidden);
+        card.querySelector('.tl-toggle-label').textContent = det.hidden ? '查看这步运的建议' : '收起建议';
+        card.setAttribute('aria-expanded', String(!det.hidden));
       };
       card.addEventListener('click', toggle);
       card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
     });
 
     // 当前所处大运区间（用于流年高亮）
-    let curRun = null;
-    const now = Date.now();
-    dy.runs.forEach((d, index) => {
-      const start = new Date(d.startDate + 'T00:00:00').getTime();
-      const next = dy.runs[index + 1] ? new Date(dy.runs[index + 1].startDate + 'T00:00:00').getTime() : Infinity;
-      if (now >= start && now < next) curRun = d;
-    });
     const inCurRun = (y) => curRun && y >= curRun.startYear && y <= curRun.startYear + 9;
-    if (curRun) {
-      document.getElementById('dayun-intro').innerHTML +=
-        `　·　当前行 <b>${curRun.ganName}${curRun.zhiName}</b> 运（${curRun.startDate} 起）`;
-    }
 
     // 流年：点击查看该年详情（短句，不重复主题词典长文）
     document.getElementById('liunian-grid').innerHTML = r.liunian.map((n, i) => {
@@ -771,10 +775,11 @@
       const focus = I.TEN_GOD_FOCUS ? I.TEN_GOD_FOCUS[n.tenGod] : '';
       const detail = `${n.year}年 <b>${n.name}</b> · ${n.tenGod}${focus ? '（' + focus + '）' : ''}${rel ? '，' + n.relWithDayZhi.join('') + '日支' : ''}。${wxNoteFor(n, r)}`;
       const cls = [n.isCurrent ? 'current' : '', inCurRun(n.year) ? 'in-dayun' : ''].join(' ').trim();
-      return `<div class="ln-cell ${cls}" data-liu="${i}" role="button" tabindex="0">
+      return `<div class="ln-cell ${cls}" data-liu="${i}" role="button" tabindex="0" aria-expanded="false">
         <span class="ln-year">${n.year}</span>
         <span class="ln-gz"><i class="wx-${K.GAN_WUXING[K.TIANGAN.indexOf(n.gan)]}">${n.gan}</i><i class="wx-${K.ZHI_WUXING[K.DIZHI.indexOf(n.zhi)]}">${n.zhi}</i></span>
         <span class="ln-shen">${n.tenGod}</span>${rel}
+        <span class="ln-toggle-label">查看</span>
         <div class="ln-detail" hidden>${detail}</div>
       </div>`;
     }).join('');
@@ -783,6 +788,8 @@
         const det = cell.querySelector('.ln-detail');
         det.hidden = !det.hidden;
         cell.classList.toggle('open', !det.hidden);
+        cell.querySelector('.ln-toggle-label').textContent = det.hidden ? '查看' : '收起';
+        cell.setAttribute('aria-expanded', String(!det.hidden));
       };
       cell.addEventListener('click', toggle);
       cell.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
@@ -847,19 +854,27 @@
 
     const expanded = index < 2;
     body.hidden = !expanded;
+    const firstText = Array.from(body.querySelectorAll('p, li'))
+      .map(node => node.textContent.trim()).find(Boolean) || '打开查看这一部分的完整解读。';
+    const preview = document.createElement('p');
+    preview.className = 'read-card-preview';
+    preview.textContent = firstText.length > 88 ? `${firstText.slice(0, 88)}…` : firstText;
+    preview.hidden = expanded;
+    card.insertBefore(preview, body);
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'read-card-toggle';
     toggle.setAttribute('aria-expanded', String(expanded));
     toggle.setAttribute('aria-controls', bodyId);
-    toggle.innerHTML = `<span>${T.escapeHtml(title)}</span><small>${expanded ? '收起' : '展开'}</small>`;
+    toggle.innerHTML = `<span>${T.escapeHtml(title)}</span><small>${expanded ? '收起内容' : '查看完整解读'}</small>`;
     heading.textContent = '';
     heading.appendChild(toggle);
     toggle.addEventListener('click', () => {
       const open = toggle.getAttribute('aria-expanded') === 'true';
       toggle.setAttribute('aria-expanded', String(!open));
-      toggle.querySelector('small').textContent = open ? '展开' : '收起';
+      toggle.querySelector('small').textContent = open ? '查看完整解读' : '收起内容';
       body.hidden = open;
+      preview.hidden = !open;
     });
     return { id, title };
   }
@@ -1018,6 +1033,7 @@
     action.value = experiment.action;
     criterion.value = experiment.criterion;
     document.getElementById('reflection-action-preview').textContent = experiment.action;
+    document.getElementById('reflection-criterion-preview').textContent = experiment.criterion;
   }
 
   function writeReflections(records) {
@@ -1087,9 +1103,11 @@
     document.getElementById('reflection-subject-hint').textContent = '命盘知道你的节奏，但不知道你手上的具体项目；需要时直接改这一句。';
     action.value = record ? record.action : draftAction;
     action.dataset.auto = record ? 'false' : 'true';
-    document.getElementById('reflection-criterion').value = record
+    const criterionValue = record
       ? (record.criterion || experiment.criterion || '')
       : (composed ? composed.criterion : (experiment.criterion || ''));
+    document.getElementById('reflection-criterion').value = criterionValue;
+    document.getElementById('reflection-criterion-preview').textContent = criterionValue || '第 7 天能看到一个真实结果。';
     document.getElementById('reflection-action-preview').textContent = record
       ? record.action
       : (draftAction || emptyHint);

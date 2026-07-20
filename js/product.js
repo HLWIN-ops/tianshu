@@ -471,11 +471,11 @@
   function experimentAction(focus, subject, execution) {
     const target = `“${subject}”`;
     const prefix = {
-      overall: `围绕${target}，只选一个最小结果，今天写清完成标准，并在 7 天内做出可展示版本。`,
-      career: `围绕${target}，今天写清交付物和截止日，并在 7 天内交出第一版。`,
-      wealth: `围绕${target}，先写明金额上限和停止条件，连续 7 天记录真实收支或反馈。`,
-      relationship: `围绕${target}，安排一次 20 分钟对话：只表达一个具体请求，并请对方复述理解。`,
-      wellbeing: `围绕${target}，设定一个最低标准，连续 7 天每天只记录是否完成和身体感受。`,
+      overall: `本周要做：${target}。今天写清完成标准，7 天内做出一个能展示的版本。`,
+      career: `本周要做：${target}。今天写清交付物和截止日，7 天内交出第一版。`,
+      wealth: `本周要做：${target}。先写明金额上限和停止条件，连续 7 天记录真实收支或反馈。`,
+      relationship: `本周要做：${target}。安排一次 20 分钟对话，只表达一个具体请求，并请对方复述理解。`,
+      wellbeing: `本周要做：${target}。设定一个最低标准，连续 7 天记录是否完成和身体感受。`,
     };
     return `${prefix[focus] || prefix.overall}${execution || ''}`;
   }

@@ -859,7 +859,9 @@
       document.getElementById('reflection-subject').focus();
     });
     document.getElementById('reflection-subject').addEventListener('input', updateReflectionDraft);
-    document.getElementById('reflection-criterion').addEventListener('input', updateReflectionDraft);
+    document.getElementById('reflection-criterion').addEventListener('input', () => {
+      document.getElementById('reflection-action').dataset.auto = 'false';
+    });
     document.getElementById('reflection-action').addEventListener('input', event => {
       event.target.dataset.auto = 'false';
       document.getElementById('reflection-action-preview').textContent = event.target.value.trim() || '请写下一件准备验证的事。';
@@ -938,16 +940,26 @@
     return Boolean(record && (record.status === 'done' || record.status === 'adjusted'));
   }
 
+  function reflectionIsDue(record, now = new Date()) {
+    if (!record || reflectionIsFinal(record)) return false;
+    if (record.month && !record.dueAt) return true;
+    return Boolean(record.dueAt && Date.parse(record.dueAt) <= now.getTime());
+  }
+
   function reflectionStatusLabel(record, now = new Date()) {
     if (!record) return '未开始';
     if (record.status === 'done') return '有效 · 值得保留';
     if (record.status === 'adjusted') return '不适合 · 已调整';
-    if (record.dueAt && Date.parse(record.dueAt) < now.getTime()) return '已到期 · 待复盘';
+    if (reflectionIsDue(record, now)) return record.month && !record.dueAt ? '旧版记录 · 待复盘' : '已到期 · 待复盘';
     if (record.status === 'doing') return '观察中';
     return '已开始 · 等待记录';
   }
 
   function reflectionRange(record, now = new Date()) {
+    if (record && record.month && !record.startedAt) {
+      const [year, month] = record.month.split('-').map(Number);
+      return `${year}年${month}月 · 旧版记录`;
+    }
     const start = record && record.startedAt ? new Date(record.startedAt) : now;
     const end = record && record.dueAt ? new Date(record.dueAt) : addDays(start, 7);
     return `${start.getMonth() + 1}月${start.getDate()}日—${end.getMonth() + 1}月${end.getDate()}日`;
@@ -955,6 +967,7 @@
 
   function reflectionOutcome(record, now = new Date()) {
     if (!record) return null;
+    const due = reflectionIsDue(record, now);
     if (record.status === 'done') return {
       title: '这条建议在现实中有用，可以保留',
       text: '你记录的事实支持这次做法。下一轮可以保留策略，只调整目标大小或完成节奏。',
@@ -964,14 +977,14 @@
       text: '现实结果没有支持原来的做法。保留事实记录，下一轮缩小目标、改变边界，或者直接放弃这条建议。',
     };
     if (record.status === 'doing') return {
-      title: record.dueAt && Date.parse(record.dueAt) < now.getTime() ? '已经到复盘时间，请记录真实结果' : '正在观察，还没有结论',
-      text: record.dueAt && Date.parse(record.dueAt) < now.getTime()
+      title: due ? '已经到复盘时间，请记录真实结果' : '正在观察，还没有结论',
+      text: due
         ? '选择“有效”或“不适合”，再写下实际发生的事实，系统就会生成保留或调整建议。'
         : '先执行并记录事实。第 7 天再判断这条建议值得保留，还是需要调整。',
     };
     return {
-      title: record.dueAt && Date.parse(record.dueAt) < now.getTime() ? '已经到复盘时间，请记录真实结果' : '校验已开始，第 7 天回来得出结论',
-      text: record.dueAt && Date.parse(record.dueAt) < now.getTime()
+      title: due ? '已经到复盘时间，请记录真实结果' : '校验已开始，第 7 天回来得出结论',
+      text: due
         ? '展开下方复盘，写下事实并选择结果。你会得到“保留这条策略”或“调整/放弃”的明确结论。'
         : '这 7 天只执行上面的做法并观察完成标准。到期后根据事实决定：保留、调整或放弃。',
     };
@@ -996,61 +1009,137 @@
     } catch (_) { return false; }
   }
 
+  // 试做进度环：半径 31 的圆周长
+  const REFLECTION_RING_C = 2 * Math.PI * 31;
+
+  // 统一四种状态：empty 未开始 / active 进行中 / due 已到复盘时间 / done 已有结论
+  function reflectionState(record, now = new Date()) {
+    if (!record) return 'empty';
+    if (reflectionIsFinal(record)) return 'done';
+    if (reflectionIsDue(record, now)) return 'due';
+    return 'active';
+  }
+
+  function reflectionProgress(record, now = new Date()) {
+    if (record && record.month && !record.dueAt) return {
+      fraction: 1,
+      overdue: true,
+      label: '旧版记录 · 可复盘',
+      note: '这是升级前保存的记录，现在可以补写事实并得出结论',
+    };
+    const start = record && record.startedAt ? Date.parse(record.startedAt) : now.getTime();
+    const due = record && record.dueAt ? Date.parse(record.dueAt) : addDays(new Date(start), 7).getTime();
+    const total = Math.max(1, due - start);
+    const elapsed = Math.min(Math.max(now.getTime() - start, 0), total);
+    const dayNumber = Math.min(7, Math.max(1, Math.floor((now.getTime() - start) / 86400000) + 1));
+    const overdue = now.getTime() > due;
+    const dueDate = new Date(due);
+    return {
+      fraction: elapsed / total,
+      overdue,
+      label: overdue ? '已满 7 天' : `第 ${dayNumber} 天 · 共 7 天`,
+      note: overdue ? '该记下事实、得出这条建议的结论了' : `${dueDate.getMonth() + 1}月${dueDate.getDate()}日到期，到时回来记结果就行`,
+    };
+  }
+
   function renderReflection() {
     const action = document.getElementById('reflection-action');
     if (!action || !currentFormInput) return;
+    const card = document.getElementById('reflection-card');
     const profile = savedCurrentProfile();
     const records = readReflections();
     const record = reflectionForDisplay(profile, records);
-    const experiment = currentInsights && currentInsights.experiment ? currentInsights.experiment : {};
-    const subject = record ? (record.subject || '') : '';
-    const generatedAction = subject && T.composeExperiment(currentInsights, subject)
-      ? T.composeExperiment(currentInsights, subject).action
-      : (currentInsights && currentInsights.actions[0] ? currentInsights.actions[0].text : '填写真实事情后，天枢会把命盘策略翻译成 7 天可验证的做法。');
-    const actionText = record ? record.action : generatedAction;
-    document.getElementById('reflection-subject').value = subject;
-    document.getElementById('reflection-subject-hint').textContent = experiment.subjectExample || '系统不知道你的现实处境，这里只需要写一句真实、具体的事情。';
-    action.value = actionText;
-    action.dataset.auto = record ? 'false' : 'true';
-    document.getElementById('reflection-criterion').value = record ? (record.criterion || experiment.criterion || '') : (subject && T.composeExperiment(currentInsights, subject) ? T.composeExperiment(currentInsights, subject).criterion : experiment.criterion || '填写真实事情后，系统会给出可观察的完成标准。');
-    document.getElementById('reflection-action-preview').textContent = actionText;
-    document.getElementById('reflection-editor').open = !record;
-    document.getElementById('reflection-status').value = record ? record.status : 'planned';
-    document.getElementById('reflection-evidence').value = record ? record.evidence : '';
     const now = new Date();
-    const isFinal = reflectionIsFinal(record);
-    const overdue = Boolean(record && record.dueAt && Date.parse(record.dueAt) < now.getTime() && !isFinal);
-    document.getElementById('reflection-review').open = Boolean(record && (overdue || record.evidence || isFinal));
-    document.getElementById('reflection-strategy').textContent = record ? (record.strategy || experiment.strategy || '') : (experiment.strategy || '填写真实事情后生成。');
-    document.getElementById('reflection-boundary').textContent = record ? (record.boundary || experiment.boundary || '') : (experiment.boundary || '先写清停止条件，不把命理当作确定性结论。');
-    document.getElementById('reflection-metric').textContent = record ? (record.metric || experiment.metric || '') : (experiment.metric || '第 7 天只根据事实判断。');
+    const state = reflectionState(record, now);
+    const progress = record ? reflectionProgress(record, now) : null;
+    const experiment = currentInsights && currentInsights.experiment ? currentInsights.experiment : {};
+    const composeFor = (value) => (value && T.composeExperiment(currentInsights, value)) || null;
+
+    if (card) card.dataset.state = state;
+
+    // —— 未开始：选一件真实的事，天枢生成做法 ——
+    const subject = record ? (record.subject || '') : '';
+    const composed = composeFor(subject);
+    // 未填主题时，先展示当前关注方向下的通用做法，证明系统已经能给出具体建议。
+    const genericAction = currentInsights && currentInsights.actions[0] ? currentInsights.actions[0].text : '';
+    const draftAction = composed ? composed.action : genericAction;
+    const emptyHint = '先在上方写一件你要推进的事，天枢会把命盘建议翻成这 7 天的具体做法。';
+    document.getElementById('reflection-subject').value = subject;
+    document.getElementById('reflection-subject-hint').textContent = experiment.subjectExample
+      ? `不知道怎么写？${experiment.subjectExample}`
+      : '写一句真实、具体的事就行，系统并不知道你的现实处境。';
+    action.value = record ? record.action : draftAction;
+    action.dataset.auto = record ? 'false' : 'true';
+    document.getElementById('reflection-criterion').value = record
+      ? (record.criterion || experiment.criterion || '')
+      : (composed ? composed.criterion : (experiment.criterion || ''));
+    document.getElementById('reflection-action-preview').textContent = record
+      ? record.action
+      : (draftAction || emptyHint);
+    document.getElementById('reflection-editor').open = !record;
+    document.getElementById('reflection-month-empty').textContent = `周期 ${reflectionRange(null, now)} · 只保存在当前浏览器，不上传`;
+
+    // —— 进行中 / 已结论：当前任务与进度 ——
+    document.getElementById('reflection-current-subject').textContent = record ? (record.subject || '未填写') : '';
+    document.getElementById('reflection-current-action').textContent = record ? record.action : '';
+    document.getElementById('reflection-current-criterion').textContent = record ? (record.criterion || experiment.criterion || '—') : '';
+    if (progress) {
+      document.getElementById('reflection-progress-label').textContent = progress.label;
+      document.getElementById('reflection-progress-note').textContent = progress.note;
+      const ring = document.getElementById('reflection-ring-fg');
+      if (ring) {
+        ring.style.strokeDasharray = String(REFLECTION_RING_C);
+        ring.style.strokeDashoffset = String(REFLECTION_RING_C * (1 - progress.fraction));
+      }
+    }
+    document.getElementById('reflection-month').textContent = record
+      ? `周期 ${reflectionRange(record, now)}${state === 'due' ? ' · 已到复盘时间' : (state === 'active' ? ' · 到时回来记结果' : '')}`
+      : '';
+
+    // —— 复盘表单：进行中与到期可见，未开始与已结论隐藏 ——
+    const review = document.getElementById('reflection-review');
+    review.hidden = (state === 'empty' || state === 'done');
+    review.open = Boolean(record && state === 'due');
+    const statusControl = document.getElementById('reflection-status');
+    const canFinalize = state === 'due';
+    ['done', 'adjusted'].forEach(value => {
+      const option = statusControl.querySelector(`option[value="${value}"]`);
+      if (option) option.disabled = !canFinalize;
+    });
+    statusControl.value = record ? record.status : 'planned';
+    document.getElementById('reflection-evidence').value = record ? record.evidence : '';
+    document.getElementById('btn-save-reflection-review').textContent = canFinalize ? '得出结论' : '保存进度';
+
+    // —— 结论横幅 ——
     const outcome = reflectionOutcome(record, now);
     const outcomeRoot = document.getElementById('reflection-outcome');
     outcomeRoot.hidden = !outcome;
+    outcomeRoot.dataset.variant = record && record.status === 'done' ? 'done'
+      : (record && record.status === 'adjusted' ? 'adjusted' : 'progress');
     if (outcome) {
+      document.getElementById('reflection-outcome-label').textContent = reflectionIsFinal(record) ? '本轮结论' : '当前状态';
       document.getElementById('reflection-outcome-title').textContent = outcome.title;
       document.getElementById('reflection-outcome-text').textContent = outcome.text;
     }
-    const saveButton = document.getElementById('btn-save-reflection');
-    saveButton.hidden = isFinal;
-    saveButton.textContent = record ? '更新这轮试做' : '开始 7 天试做';
-    document.getElementById('btn-new-reflection').hidden = !isFinal;
-    document.getElementById('reflection-review').hidden = !record;
-    document.getElementById('reflection-month').textContent = record
-      ? `${reflectionRange(record, now)} · ${overdue ? '已到复盘时间' : '仅保存在本机'}`
-      : `${reflectionRange(null, now)} · 点击后仅保存在本机`;
-    renderReflectionHistory(profile, records, record);
+    document.getElementById('btn-new-reflection').hidden = state !== 'done';
+
+    // —— 依据 ——
+    document.getElementById('reflection-strategy').textContent = record ? (record.strategy || experiment.strategy || '') : (experiment.strategy || '填写真实事情后生成。');
+    document.getElementById('reflection-boundary').textContent = record ? (record.boundary || experiment.boundary || '') : (experiment.boundary || '先写清停止条件，不把命理当作确定性结论。');
+    document.getElementById('reflection-metric').textContent = record ? (record.metric || experiment.metric || '') : (experiment.metric || '第 7 天只根据事实判断。');
+
+    renderReflectionHistory(profile, records);
   }
 
-  function renderReflectionHistory(profile, records = readReflections(), currentRecord = null) {
+  function renderReflectionHistory(profile, records = readReflections()) {
     const root = document.getElementById('reflection-history');
     if (!root) return;
     const history = profile ? records.filter(item => item.profileId === profile.id)
       .sort((a, b) => Date.parse(b.startedAt || b.updatedAt) - Date.parse(a.startedAt || a.updatedAt)) : [];
     if (!history.length) { root.innerHTML = ''; return; }
     root.innerHTML = `<div class="reflection-history-title"><span>本机试做历史</span><small>${history.length} 轮</small></div><div class="reflection-history-list">${history.slice(0, 8).map(item => {
-      const outcome = reflectionOutcome(item);
-      return `<details class="reflection-history-item" data-reflection-id="${T.escapeHtml(item.id)}"${currentRecord && item.id === currentRecord.id ? ' open' : ''}>
+      const outcome = reflectionIsFinal(item) ? reflectionOutcome(item) : null;
+      return `<details class="reflection-history-item" data-reflection-id="${T.escapeHtml(item.id)}">
         <summary><span><b>${T.escapeHtml(item.subject || '旧版记录')}</b><small>${reflectionRange(item)} · ${reflectionStatusLabel(item)}</small></span><span class="history-toggle">查看</span></summary>
         <dl class="reflection-history-detail">
           <div><dt>这 7 天做什么</dt><dd>${T.escapeHtml(item.action)}</dd></div>
@@ -1135,6 +1224,7 @@
     }
     const now = new Date();
     if (reflectionIsFinal({ status }) && existing.dueAt && Date.parse(existing.dueAt) > now.getTime()) {
+      renderReflection();
       toast('先完成 7 天试做，到期后再选择是否继续');
       return;
     }
@@ -1320,9 +1410,12 @@
           }
           const review = document.getElementById('reflection-review');
           const record = latestReflection(profile, readReflections());
-          if (review && record && !reflectionIsFinal(record) && record.dueAt && Date.parse(record.dueAt) < Date.now()) review.open = true;
-          const target = record && record.dueAt && Date.parse(record.dueAt) < Date.now()
-            ? document.getElementById('reflection-status') : document.getElementById('reflection-subject');
+          const recordDue = reflectionIsDue(record, new Date());
+          if (review && record && recordDue) review.open = true;
+          const target = record && recordDue
+            ? document.getElementById('reflection-status')
+            : (record ? document.getElementById('reflection-title') : document.getElementById('reflection-subject'));
+          if (target && target.id === 'reflection-title') target.tabIndex = -1;
           target && target.focus({ preventScroll: true });
         });
       });

@@ -30,8 +30,12 @@ async function openSavedChart(page) {
     const reflection = document.querySelector('.reflection-card')?.getBoundingClientRect();
     const tabs = document.querySelector('.tabs')?.getBoundingClientRect();
     const activeFields = ['#reflection-title', '#reflection-subject', '#reflection-status', '#btn-save-reflection-review']
-      .map(selector => ({ selector, rect: document.querySelector(selector)?.getBoundingClientRect() }))
-      .filter(item => item.rect && item.rect.bottom > 0 && item.rect.top < window.innerHeight);
+      .map(selector => {
+        const node = document.querySelector(selector);
+        const hiddenByDetails = Boolean(node && node.closest('details:not([open])'));
+        return { selector, rect: node?.getBoundingClientRect(), hidden: !node || node.offsetParent === null || hiddenByDetails };
+      })
+      .filter(item => item.rect && !item.hidden && item.rect.bottom > 0 && item.rect.top < window.innerHeight);
     return { masthead, reflection, tabs, activeFields, viewportHeight: window.innerHeight };
   });
   assert.ok(geometry.reflection && geometry.masthead && geometry.reflection.top >= geometry.masthead.bottom - 1,
@@ -76,12 +80,15 @@ async function main() {
     await page.locator('#form button[type=submit]').click();
     await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
 
-    const purpose = await page.locator('.reflection-purpose').innerText();
-    assert.match(purpose, /真实生活.*不是命令.*不会在后台通知你.*7 天后.*保留、调整或放弃/s, '功能必须先说清用途和结果');
+    const lede = await page.locator('.reflection-lede').innerText();
+    assert.match(lede, /方向.*试了才知道.*真实要做的事.*7 天.*有用就留，没用就丢/s, '必须先用一句白话说清这是什么、试完有什么用');
     assert.match(await page.locator('.reflection-payoff').innerText(), /保留.*调整.*放弃/s, '未开始时也必须直接说明七天后的三种结果');
+    await capture(page, 'mobile-empty-report');
     await page.locator('#reflection-subject').fill('完成作品集首页并请一位同行评审');
     assert.match(await page.locator('#reflection-action').inputValue(), /作品集首页.*7 天/, '填写真实事情后应生成对应做法');
     assert.match(await page.locator('#reflection-criterion').inputValue(), /第 7 天.*反馈/, '必须给出可判断的完成标准');
+    await page.locator('#reflection-criterion').fill('第 7 天交付首页，并收到两条可执行反馈。');
+    assert.equal(await page.locator('#reflection-criterion').inputValue(), '第 7 天交付首页，并收到两条可执行反馈。', '用户修改完成标准后不得被系统覆盖');
     assert.equal(await page.locator('#reflection-review').isHidden(), true, '未开始前不应展示复盘表单');
     await page.locator('#btn-save-reflection').click();
 
@@ -94,11 +101,19 @@ async function main() {
     assert.match(await page.locator('#reflection-outcome').innerText(), /第 7 天回来得出结论|保留、调整或放弃/, '开始后应说明七天后得到什么');
     assert.equal(await page.locator('#btn-new-reflection').isHidden(), true, '得出结论前不能开启下一轮');
     await page.locator('#reflection-review > summary').click();
-    await page.locator('#reflection-status').selectOption('done');
+    assert.equal(await page.locator('#reflection-status option[value=done]').isDisabled(), true, 'T+0 不得选择最终结论');
+    assert.equal(await page.locator('#reflection-status option[value=adjusted]').isDisabled(), true, 'T+0 不得选择调整或放弃');
+    assert.equal(await page.locator('#btn-save-reflection-review').innerText(), '保存进度', 'T+0 主按钮只能保存进度');
+    await page.evaluate(() => {
+      const control = document.querySelector('#reflection-status');
+      control.querySelector('option[value=done]').disabled = false;
+      control.value = 'done';
+    });
     await page.locator('#reflection-evidence').fill('提前记录的事实不应直接结案。');
     await page.locator('#btn-save-reflection-review').click();
     await page.waitForFunction(() => /先完成 7 天试做/.test(document.querySelector('#toast')?.textContent || ''));
     assert.equal(await page.locator('#btn-new-reflection').isHidden(), true, '到期前不得生成结论或开启下一轮');
+    assert.equal(await page.locator('#reflection-status').inputValue(), 'planned', '拒绝提前结案后必须回滚可见状态');
     await capture(page, 'mobile-t0-report');
 
     const storedAction = records[0].action;
@@ -112,6 +127,8 @@ async function main() {
     assert.match(await page.locator('#reflection-month').innerText(), /已到复盘时间/, 'T+8 同一记录应自动进入待复盘态');
     assert.equal(await page.locator('#reflection-review').getAttribute('open'), '', 'T+8 复盘表单应自动展开');
     assert.equal(await page.locator('#reflection-subject').inputValue(), '完成作品集首页并请一位同行评审', 'T+8 不得丢失原记录');
+    assert.equal(await page.locator('#reflection-status option[value=done]').isDisabled(), false, 'T+8 应解锁最终结论');
+    assert.equal(await page.locator('#btn-save-reflection-review').innerText(), '得出结论', 'T+8 主按钮应生成结论');
 
     await page.locator('#reflection-status').selectOption('done');
     await page.locator('#reflection-evidence').fill('交付了首页初版，收到同行两条具体修改意见。');
@@ -161,6 +178,29 @@ async function main() {
     await page.waitForFunction(() => /已导入/.test(document.querySelector('#toast')?.textContent || ''));
     assert.equal(await page.locator('#profile-list .profile-card').count(), 1, '导入后应恢复档案');
     assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key) || '[]').length, REFLECTION_KEY), 2, '导入后应恢复两轮历史');
+
+    await page.evaluate(({ profileKey, reflectionKey }) => {
+      const profile = JSON.parse(localStorage.getItem(profileKey) || '[]')[0];
+      const legacy = {
+        id: `${profile.id}|2026-06`, profileId: profile.id, month: '2026-06',
+        action: '旧版记录：完成一项可验收的小行动', evidence: '', status: 'planned',
+        updatedAt: '2026-06-30T10:00:00.000Z',
+      };
+      localStorage.setItem(reflectionKey, JSON.stringify([legacy]));
+    }, { profileKey: PROFILE_KEY, reflectionKey: REFLECTION_KEY });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.dataset.appReady === 'true');
+    await openSavedChart(page);
+    assert.equal(await page.locator('#reflection-card').getAttribute('data-state'), 'due', '旧版月记录必须直接进入待复盘态');
+    assert.match(await page.locator('#reflection-progress-label').innerText(), /旧版记录.*可复盘/, '旧版记录不得伪造新的七天周期');
+    assert.match(await page.locator('#reflection-month').innerText(), /2026年6月.*旧版记录.*已到复盘时间/, '旧版记录必须保留原月份并说明状态');
+    assert.equal(await page.locator('#reflection-review').getAttribute('open'), '', '旧版记录应自动展开复盘');
+    assert.equal(await page.locator('#reflection-status option[value=done]').isDisabled(), false, '旧版记录应允许补写最终结论');
+    await page.locator('#reflection-status').selectOption('done');
+    await page.locator('#reflection-evidence').fill('旧版行动已经完成，并留下一个可核对的结果。');
+    await page.locator('#btn-save-reflection-review').click();
+    assert.equal(await page.locator('#reflection-card').getAttribute('data-state'), 'done', '旧版记录补写事实后应完成迁移闭环');
+    assert.match(await page.locator('#reflection-outcome').innerText(), /现实中有用.*可以保留/s, '旧版记录应生成明确结论');
 
     assert.deepEqual(errors, [], `file:// 旅程出现浏览器错误：\n${errors.join('\n')}`);
     await context.close();

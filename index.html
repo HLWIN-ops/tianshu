@@ -256,82 +256,113 @@
 
         <section class="result-cockpit" aria-label="命盘总览">
           <div class="insight-overview" id="insight-overview"></div>
-          <section class="reflection-card" aria-labelledby="reflection-title">
-            <header>
-              <div><span class="resume-kicker">可选 · 7 天试做</span><h2 id="reflection-title">这周试做，7 天后知道是否继续</h2></div>
-              <span class="local-badge">可选</span>
+          <section class="reflection-card" id="reflection-card" aria-labelledby="reflection-title" data-state="empty">
+            <header class="reflection-head">
+              <div><span class="resume-kicker">可选 · 只保存在当前浏览器</span><h2 id="reflection-title">先试 7 天，再决定信不信</h2></div>
+              <span class="local-badge">本地保存</span>
             </header>
-            <p class="reflection-purpose">把报告里的一条建议放进真实生活做一次小测试。这不是命令，也不会在后台通知你；7 天后你会得到一个明确结果：保留、调整或放弃。</p>
-            <ol class="validation-steps" aria-label="现实校验步骤">
-              <li><span>今天</span><b>选一件真实的事</b></li>
-              <li><span>7 天</span><b>按一个具体做法去做</b></li>
-              <li><span>第 7 天</span><b>记下事实，选择下一步</b></li>
-            </ol>
-            <div class="reflection-payoff" aria-label="七天试做结果">
-              <span>7 天后你会得到什么</span>
-              <div class="reflection-payoff-options">
-                <b><i>保留</i>这条做法有效</b>
-                <b><i>调整</i>换个做法再试</b>
-                <b><i>放弃</i>不再把它当建议</b>
+
+            <!-- 未开始：这是什么、有什么用 -->
+            <div class="reflection-stage" data-stage="empty">
+              <p class="reflection-lede">命理只负责给方向，适不适合你要试了才知道。挑一件你这周真实要做的事，照着建议做 7 天，再回头看事实——有用就留，没用就丢，不用盲目照做。</p>
+              <ol class="reflection-loop" aria-label="怎么试">
+                <li><i>1</i><div><b>选一件真实的事</b><span>你这周本来就想推进的那件</span></div></li>
+                <li><i>2</i><div><b>照着做 7 天</b><span>天枢把建议翻成具体做法</span></div></li>
+                <li><i>3</i><div><b>看事实下结论</b><span>只认发生的事，不凭感觉</span></div></li>
+              </ol>
+              <div class="reflection-payoff" aria-label="七天之后能得到什么">
+                <span>7 天后，你会得到一个明确结论</span>
+                <div class="reflection-payoff-options">
+                  <b><i>✓ 有用</i>保留，接着用</b>
+                  <b><i>◐ 要调整</i>换个做法再试</b>
+                  <b><i>✗ 不贴合</i>放弃，不再参考</b>
+                </div>
+              </div>
+              <div class="field reflection-subject-field">
+                <label for="reflection-subject">你这周想推进的一件事</label>
+                <input type="text" id="reflection-subject" maxlength="60" placeholder="写一件真实、具体的事，例如：完成作品集首页">
+                <p class="hint" id="reflection-subject-hint"></p>
+              </div>
+              <div class="generated-action-wrap">
+                <span>天枢建议这样做</span>
+                <p class="generated-action" id="reflection-action-preview"></p>
+              </div>
+              <details class="reflection-editor" id="reflection-editor" open>
+                <summary>做法不合适？点这里改</summary>
+                <div class="field reflection-action-field">
+                  <label for="reflection-action">这 7 天具体做什么</label>
+                  <textarea id="reflection-action" maxlength="160" rows="3"></textarea>
+                </div>
+                <div class="field reflection-criterion-field">
+                  <label for="reflection-criterion">做到什么程度算有结果</label>
+                  <textarea id="reflection-criterion" maxlength="180" rows="2"></textarea>
+                </div>
+              </details>
+              <div class="reflection-start">
+                <button type="button" class="primary" id="btn-save-reflection">开始 7 天试做</button>
+                <span id="reflection-month-empty"></span>
               </div>
             </div>
-            <div class="field reflection-subject-field">
-              <label for="reflection-subject">你现在真正想推进什么</label>
-              <input type="text" id="reflection-subject" maxlength="60" placeholder="填写一件真实、具体的事">
-              <p class="hint" id="reflection-subject-hint"></p>
-            </div>
-            <div class="generated-action-wrap">
-              <span>天枢建议的做法</span>
-              <p class="generated-action" id="reflection-action-preview"></p>
-            </div>
-            <details class="reflection-editor" id="reflection-editor" open>
-              <summary>调整行动和完成标准</summary>
-              <div class="field reflection-action-field">
-                <label for="reflection-action">这 7 天具体做什么</label>
-                <textarea id="reflection-action" maxlength="160" rows="3"></textarea>
+
+            <!-- 进行中 / 已结论：进度 + 当前任务回顾 -->
+            <div class="reflection-stage" data-stage="recap">
+              <div class="reflection-progress" id="reflection-progress">
+                <svg class="reflection-ring" viewBox="0 0 72 72" aria-hidden="true">
+                  <circle class="ring-bg" cx="36" cy="36" r="31"></circle>
+                  <circle class="ring-fg" id="reflection-ring-fg" cx="36" cy="36" r="31"></circle>
+                </svg>
+                <div class="reflection-progress-text">
+                  <b id="reflection-progress-label">第 1 天 · 共 7 天</b>
+                  <span id="reflection-progress-note"></span>
+                </div>
               </div>
-              <div class="field reflection-criterion-field">
-                <label for="reflection-criterion">什么算有结果</label>
-                <textarea id="reflection-criterion" maxlength="180" rows="2"></textarea>
+              <dl class="reflection-current">
+                <div><dt>你要推进的事</dt><dd id="reflection-current-subject"></dd></div>
+                <div><dt>这 7 天这样做</dt><dd id="reflection-current-action"></dd></div>
+                <div><dt>怎样算有结果</dt><dd id="reflection-current-criterion"></dd></div>
+              </dl>
+              <div class="reflection-start">
+                <span id="reflection-month"></span>
+              </div>
+            </div>
+
+            <!-- 复盘：到期自动展开 -->
+            <details class="reflection-review" id="reflection-review">
+              <summary>记下事实，得出这条建议的结论</summary>
+              <div class="reflection-grid">
+                <div class="field">
+                  <label for="reflection-status">这条建议对你</label>
+                  <select id="reflection-status">
+                    <option value="planned">还没开始</option>
+                    <option value="doing">在做，再观察几天</option>
+                    <option value="done">有用，保留</option>
+                    <option value="adjusted">不合适，调整或放弃</option>
+                  </select>
+                </div>
+                <div class="field reflection-evidence-field">
+                  <label for="reflection-evidence">实际发生了什么（只写事实）</label>
+                  <textarea id="reflection-evidence" maxlength="400" rows="3" placeholder="做了几次、做出了什么、别人怎么回应、数据有什么变化"></textarea>
+                </div>
+              </div>
+              <div class="reflection-review-actions">
+                <button type="button" class="primary compact" id="btn-save-reflection-review">得出结论</button>
+                <button type="button" class="tool-button danger" id="btn-clear-reflection">删除这次试做</button>
               </div>
             </details>
+
+            <!-- 结论横幅 -->
+            <div class="reflection-outcome" id="reflection-outcome" hidden>
+              <span id="reflection-outcome-label">本轮结论</span><strong id="reflection-outcome-title"></strong><p id="reflection-outcome-text"></p>
+            </div>
+            <button type="button" class="primary" id="btn-new-reflection" hidden>再试一件事</button>
+
             <details class="reflection-evidence" id="reflection-evidence-detail">
-              <summary>这条策略来自哪里</summary>
+              <summary>这条建议是怎么来的</summary>
               <dl>
                 <div><dt>命盘策略</dt><dd id="reflection-strategy"></dd></div>
                 <div><dt>需要守住</dt><dd id="reflection-boundary"></dd></div>
                 <div><dt>观察指标</dt><dd id="reflection-metric"></dd></div>
               </dl>
-            </details>
-            <div class="reflection-outcome" id="reflection-outcome" hidden>
-              <span>本轮现实结论</span><strong id="reflection-outcome-title"></strong><p id="reflection-outcome-text"></p>
-            </div>
-            <div class="reflection-start">
-              <button type="button" class="primary compact" id="btn-save-reflection">开始 7 天试做</button>
-              <button type="button" class="tool-button" id="btn-new-reflection" hidden>开始下一轮试做</button>
-              <span id="reflection-month"></span>
-            </div>
-            <details class="reflection-review" id="reflection-review">
-              <summary>第 7 天：记下事实，选择下一步</summary>
-              <div class="reflection-grid">
-                <div class="field">
-                  <label for="reflection-status">这轮结果</label>
-                  <select id="reflection-status">
-                    <option value="planned">还没开始</option>
-                    <option value="doing">做了，还需要继续观察</option>
-                    <option value="done">有效，值得保留</option>
-                    <option value="adjusted">不适合，调整或放弃</option>
-                  </select>
-                </div>
-                <div class="field reflection-evidence-field">
-                  <label for="reflection-evidence">实际发生了什么</label>
-                  <textarea id="reflection-evidence" maxlength="400" rows="3" placeholder="只写事实：做了几次、交付了什么、对方如何回应、数据有什么变化"></textarea>
-                </div>
-              </div>
-              <div class="reflection-review-actions">
-                <button type="button" class="primary compact" id="btn-save-reflection-review">保存结果并生成结论</button>
-                <button type="button" class="tool-button danger" id="btn-clear-reflection">删除这次校验</button>
-              </div>
             </details>
             <div class="reflection-history" id="reflection-history"></div>
           </section>

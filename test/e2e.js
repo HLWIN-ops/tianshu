@@ -287,9 +287,19 @@ async function saveAndReopenProfile(page, name, viewportName) {
     const reflection = readRect('.reflection-card');
     const tabs = readRect('.tabs');
     const fields = ['#reflection-title', '#reflection-subject', '#reflection-status', '#btn-save-reflection-review']
-      .map(selector => ({ selector, rect: readRect(selector), hidden: document.querySelector(selector)?.offsetParent === null }))
+      .map(selector => {
+        const node = document.querySelector(selector);
+        const hiddenByDetails = Boolean(node && node.closest('details:not([open])'));
+        return { selector, rect: readRect(selector), hidden: !node || node.offsetParent === null || hiddenByDetails };
+      })
       .filter(item => item.rect && !item.hidden && item.rect.bottom > 0 && item.rect.top < window.innerHeight);
-    return { masthead, reflection, tabs, fields, viewportHeight: window.innerHeight };
+    return {
+      masthead, reflection, tabs, fields, viewportHeight: window.innerHeight,
+      scrollY: window.scrollY,
+      reflectionState: document.querySelector('#reflection-card')?.dataset.state,
+      reviewOpen: document.querySelector('#reflection-review')?.open,
+      activeElement: document.activeElement?.id,
+    };
   });
   assert.ok(resumeLayout.reflection && resumeLayout.masthead && resumeLayout.reflection.top >= resumeLayout.masthead.bottom - 1,
     `${viewportName} 继续复盘标题不得被顶部栏遮挡：${JSON.stringify(resumeLayout)}`);

@@ -104,6 +104,34 @@ async function assertNoRootOverflow(page, label) {
   assert.ok(overflow <= 1, `${label} 出现 ${overflow}px 页面级水平溢出：${JSON.stringify(metrics)}`);
 }
 
+async function assertReadableExpandedCard(page, childSelector, textSelector, label) {
+  const child = page.locator(`#read-content ${childSelector}`).first();
+  await child.waitFor({ state: 'attached' });
+  const cardId = await child.evaluate(element => element.closest('.read-card').id);
+  const card = page.locator(`#${cardId}`);
+  const toggle = card.locator(':scope > h3 .read-card-toggle');
+  const wasExpanded = await toggle.getAttribute('aria-expanded') === 'true';
+  if (!wasExpanded) await toggle.click();
+  await child.waitFor({ state: 'visible' });
+
+  const contrast = await child.evaluate((element, selector) => {
+    const parse = value => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const luminance = color => {
+      const channels = parse(color).map(value => {
+        const normalized = value / 255;
+        return normalized <= .03928 ? normalized / 12.92 : ((normalized + .055) / 1.055) ** 2.4;
+      });
+      return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+    };
+    const text = element.querySelector(selector) || element;
+    const foreground = luminance(getComputedStyle(text).color);
+    const background = luminance(getComputedStyle(element).backgroundColor);
+    return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+  }, textSelector);
+  assert.ok(contrast >= 4.5, `${label} 展开后文字对比度不足：${contrast.toFixed(2)}`);
+  if (!wasExpanded) await toggle.click();
+}
+
 async function capture(page, profileName, stage) {
   if (!CAPTURE_SCREENSHOTS) return;
   const directory = path.join(ROOT, 'test-results', 'screenshots');
@@ -210,6 +238,8 @@ async function checkTabsAndPoster(page, viewportName) {
       const collapsedPreview = page.locator('#read-content .read-card-preview:not([hidden])').first();
       await collapsedPreview.waitFor({ state: 'visible' });
       assert.ok((await collapsedPreview.innerText()).trim().length > 8, '本命折叠章节必须显示内容摘要，不能只留空白标题');
+      await assertReadableExpandedCard(page, '.ln-line', 'p', '近流年卡片');
+      await assertReadableExpandedCard(page, '.prac-item', '.prac-body', '生活实践卡片');
     }
     await assertNoRootOverflow(page, `${viewportName}/${tab}`);
     if (CAPTURE_SCREENSHOTS) await page.waitForTimeout(260);

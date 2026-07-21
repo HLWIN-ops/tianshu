@@ -36,12 +36,19 @@
   const REFLECTION_KEY = 'tianshu.reflections.v1';
   const REFLECTION_LIMIT = 60;
   const REFLECTION_DEFAULT_SUBJECT = {
-    overall: '从当前待办中选最重要的一件，做出第一版并发给一个人',
+    overall: '打开备忘录，写下今年最重要的一件事和下一步，并发给一个人',
     career: '把手上最重要的工作做成可展示的第一版',
     wealth: '检查最近 7 天账单，处理一项非必要支出',
     relationship: '约最重要的人聊 20 分钟，说清一个具体请求',
     wellbeing: '连续 7 天每天步行 20 分钟并记录完成情况',
   };
+  const LEGACY_REFLECTION_SUBJECTS = new Set([
+    '交出一个能给别人看的第一版',
+    '完成一个可公开展示的工作成果',
+    '查清一项支出或收入机会',
+    '说清一个重要请求或边界',
+    '连续七天守住一个轻量习惯',
+  ]);
 
   // 十二时辰：value = 地支序(0子..11亥)，对应真太阳时小时起点见引擎 hourZhiFromMinutes
   const SHICHEN = [
@@ -1068,10 +1075,14 @@
     const dayNumber = Math.min(7, Math.max(1, Math.floor((now.getTime() - start) / 86400000) + 1));
     const overdue = now.getTime() > due;
     const dueDate = new Date(due);
+    const label = overdue
+      ? '本周清单已到复盘时间'
+      : (dayNumber <= 1 ? '今天：先完成清单里的第一步'
+        : (dayNumber <= 3 ? '第 3 天前：拿出一个能看的版本' : '第 7 天前：根据结果决定下一步'));
     return {
       fraction: elapsed / total,
       overdue,
-      label: overdue ? '已满 7 天' : `第 ${dayNumber} 天 · 共 7 天`,
+      label,
       note: overdue ? '该记下事实、得出这条建议的结论了' : `${dueDate.getMonth() + 1}月${dueDate.getDate()}日到期，到时回来记结果就行`,
     };
   }
@@ -1081,19 +1092,44 @@
     if (!action || !currentFormInput) return;
     const card = document.getElementById('reflection-card');
     const profile = savedCurrentProfile();
-    const records = readReflections();
-    const record = reflectionForDisplay(profile, records);
+    let records = readReflections();
+    let record = reflectionForDisplay(profile, records);
     const now = new Date();
-    const state = reflectionState(record, now);
-    const progress = record ? reflectionProgress(record, now) : null;
     const experiment = currentInsights && currentInsights.experiment ? currentInsights.experiment : {};
     const composeFor = (value) => (value && T.composeExperiment(currentInsights, value)) || null;
-
-    if (card) card.dataset.state = state;
 
     // 未开始时直接给出一张完整行动卡；用户只在需要时改成自己的具体事情。
     const defaultSubject = REFLECTION_DEFAULT_SUBJECT[(currentInsights && currentInsights.focus) || 'overall']
       || REFLECTION_DEFAULT_SUBJECT.overall;
+    if (record && !reflectionIsFinal(record) && record.planVersion !== 2
+      && (LEGACY_REFLECTION_SUBJECTS.has(record.subject) || /围绕[“\"]交出一个能给别人看的第一版/.test(record.action))) {
+      const upgraded = composeFor(defaultSubject);
+      if (upgraded) {
+        record = Object.assign({}, record, {
+          subject: defaultSubject,
+          action: upgraded.action,
+          criterion: upgraded.criterion,
+          strategy: upgraded.strategy || record.strategy || '',
+          boundary: upgraded.boundary || record.boundary || '',
+          metric: upgraded.metric || record.metric || '',
+          planVersion: 2,
+          updatedAt: now.toISOString(),
+        });
+        records = [record, ...records.filter(item => item.id !== record.id)];
+        writeReflections(records);
+      }
+    }
+    const state = reflectionState(record, now);
+    const progress = record ? reflectionProgress(record, now) : null;
+    if (card) card.dataset.state = state;
+    const focusLabel = currentInsights && currentInsights.focusLabel ? currentInsights.focusLabel : '整体';
+    const stageHeadline = currentInsights && currentInsights.stageHeadline ? currentInsights.stageHeadline : '先做一件能看到结果的事';
+    document.getElementById('reflection-kicker').textContent = state === 'empty' ? '从命盘到现实' : '已保存的本周清单';
+    document.getElementById('reflection-title').textContent = state === 'empty'
+      ? '本周任务：按这件事做 7 天'
+      : (state === 'done' ? '这份本周清单已经有结果' : '你的本周行动清单');
+    document.getElementById('reflection-badge').textContent = state === 'empty' ? '可选，不影响报告' : '只保存在本机';
+    document.getElementById('reflection-lede').textContent = `这是你本周的 7 天任务：把“${stageHeadline}”变成今天能开始的一件事。照着做 7 天，第 7 天看结果；不合适可以跳过。`;
     const subject = record ? (record.subject || '') : defaultSubject;
     const composed = composeFor(subject);
     const genericAction = currentInsights && currentInsights.actions[0] ? currentInsights.actions[0].text : '';
@@ -1227,6 +1263,7 @@
     const record = {
       id: cycleRecord ? cycleRecord.id : `${profile.id}|${cycle}`,
       profileId: profile.id, cycle, startedAt, dueAt,
+      planVersion: 2,
       subject, action: action.slice(0, 160), criterion: criterion.slice(0, 180),
       strategy: experiment.strategy || '', boundary: experiment.boundary || '', metric: experiment.metric || '',
       evidence: cycleRecord ? (cycleRecord.evidence || '') : '',
@@ -1241,7 +1278,7 @@
     if (!existingProfile) { renderRecentProfile(); }
     renderProfiles();
     renderReflection();
-    toast(existingRecord ? '这轮试做已更新' : '7 天试做已开始，仅保存在本机');
+    toast(existingRecord ? '本周清单已更新' : '已保存为本周清单，仅保存在本机');
   }
 
   function saveReflectionReview() {
@@ -1249,7 +1286,7 @@
     const profile = savedCurrentProfile();
     const records = readReflections();
     const existing = reflectionForDisplay(profile, records);
-    if (!existing) { toast('先开始一轮 7 天试做'); return; }
+    if (!existing) { toast('请先保存一份本周清单'); return; }
     const status = document.getElementById('reflection-status').value;
     const evidence = document.getElementById('reflection-evidence').value.trim();
     if ((status === 'done' || status === 'adjusted') && !evidence) {
@@ -1260,7 +1297,7 @@
     const now = new Date();
     if (reflectionIsFinal({ status }) && existing.dueAt && Date.parse(existing.dueAt) > now.getTime()) {
       renderReflection();
-      toast('先完成 7 天试做，到期后再选择是否继续');
+      toast('先按本周清单做满 7 天，到期后再选择是否继续');
       return;
     }
     const updated = Object.assign({}, existing, {
@@ -1277,12 +1314,12 @@
     const records = readReflections();
     const record = reflectionForDisplay(profile, records);
     if (!record) { renderReflection(); return; }
-    if (!confirm('删除这张命盘当前显示的现实校验？')) return;
+    if (!confirm('删除这张命盘当前显示的本周清单？')) return;
     writeReflections(records.filter(item => item.id !== record.id));
     reflectionDraftNew = false;
     renderProfiles();
     renderReflection();
-    toast('这轮现实校验已删除');
+    toast('这份本周清单已删除');
   }
 
   function saveCurrentProfile() {

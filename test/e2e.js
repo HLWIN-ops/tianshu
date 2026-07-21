@@ -265,7 +265,7 @@ async function saveAndReopenProfile(page, name, viewportName) {
   const previewAction = (await page.locator('#reflection-action-preview').innerText()).trim();
   assert.equal(generatedAction, previewAction, '系统应直接展示行动建议，而不是让用户从空白录入');
   assert.match(generatedAction, /7 天|7天|20 分钟|每天记录/, '系统建议应是具体可执行动作');
-  assert.match(generatedAction, /从当前待办中选最重要的一件.*第一版.*发给一个人/s, '默认整体任务必须明确告诉用户选什么、产出什么、交给谁');
+  assert.match(generatedAction, /打开备忘录.*最重要的一件事.*下一步.*发给一个人/s, '默认整体任务必须给没有现成项目的用户一个可直接开始的产出');
   assert.ok((await page.locator('#reflection-criterion-preview').innerText()).trim().length > 12, '行动卡必须直接显示完成标准');
   await page.locator('#reflection-editor > summary').click();
   await page.locator('#reflection-subject').fill('完成一个可验收的作品集首页');

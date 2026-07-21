@@ -262,13 +262,13 @@
           <div class="insight-overview" id="insight-overview"></div>
           <section class="reflection-card" id="reflection-card" aria-labelledby="reflection-title" data-state="empty">
             <header class="reflection-head">
-              <div><span class="resume-kicker">本周行动计划</span><h2 id="reflection-title">本周行动：按这件事做 7 天</h2></div>
-              <span class="local-badge">可以直接照做</span>
+              <div><span class="resume-kicker" id="reflection-kicker">从命盘到现实</span><h2 id="reflection-title">本周任务：按这件事做 7 天</h2></div>
+              <span class="local-badge" id="reflection-badge">可选，不影响报告</span>
             </header>
 
             <!-- 未开始：这是什么、有什么用 -->
             <div class="reflection-stage" data-stage="empty">
-              <p class="reflection-lede">不用先懂命理。下面就是你的 7 天任务：今天开始做，第 3 天检查进度，第 7 天根据真实结果决定是否继续。</p>
+              <p class="reflection-lede" id="reflection-lede">这不是新的算命结果，而是把上面的命盘判断翻译成一份现实行动清单。觉得有用就保存，不适合可以直接跳过。</p>
               <div class="generated-action-wrap">
                 <span>你这周具体要做</span>
                 <p class="generated-action" id="reflection-action-preview"></p>
@@ -294,7 +294,7 @@
                 </div>
               </details>
               <div class="reflection-start">
-                <button type="button" class="primary" id="btn-save-reflection">开始这项 7 天任务 <span aria-hidden="true">→</span></button>
+                <button type="button" class="primary" id="btn-save-reflection">开始 7 天任务 <span aria-hidden="true">→</span></button>
                 <span id="reflection-month-empty"></span>
               </div>
               <ol class="reflection-loop" aria-label="怎么使用这张行动卡">
@@ -303,11 +303,11 @@
                 <li><i>第 7 天</i><div><b>看结果</b><span>根据反馈决定继续、调整或停止</span></div></li>
               </ol>
               <div class="reflection-payoff" aria-label="七天之后能得到什么">
-                <span>第 7 天，你只需要做一个决定</span>
+                <span>第 7 天，看结果后选择下一步</span>
                 <div class="reflection-payoff-options">
-                  <b><i>KEEP</i>有效，保留</b>
-                  <b><i>TUNE</i>调整，再试</b>
-                  <b><i>DROP</i>不合适，放弃</b>
+                  <b><i>继续用</i>有结果，下周继续</b>
+                  <b><i>改一下</i>有点用，调整做法</b>
+                  <b><i>不采用</i>没有用，到此为止</b>
                 </div>
               </div>
             </div>
@@ -325,9 +325,9 @@
                 </div>
               </div>
               <dl class="reflection-current">
-                <div><dt>你要推进的事</dt><dd id="reflection-current-subject"></dd></div>
-                <div><dt>这 7 天这样做</dt><dd id="reflection-current-action"></dd></div>
-                <div><dt>怎样算有结果</dt><dd id="reflection-current-criterion"></dd></div>
+                <div><dt>你保存的任务</dt><dd id="reflection-current-subject"></dd></div>
+                <div><dt>现在具体怎么做</dt><dd id="reflection-current-action"></dd></div>
+                <div><dt>做到这里算完成</dt><dd id="reflection-current-criterion"></dd></div>
               </dl>
               <div class="reflection-start">
                 <span id="reflection-month"></span>
@@ -336,15 +336,15 @@
 
             <!-- 复盘：到期自动展开 -->
             <details class="reflection-review" id="reflection-review">
-              <summary>记录事实 / 更新进度</summary>
+              <summary>我已经开始做了，记录进度</summary>
               <div class="reflection-grid">
                 <div class="field">
-                  <label for="reflection-status">这条建议对你</label>
+                  <label for="reflection-status">这份清单目前</label>
                   <select id="reflection-status">
                     <option value="planned">还没开始</option>
-                    <option value="doing">在做，再观察几天</option>
-                    <option value="done">有用，保留</option>
-                    <option value="adjusted">不合适，调整或放弃</option>
+                    <option value="doing">正在做</option>
+                    <option value="done">已经完成</option>
+                    <option value="adjusted">不适合我，不再继续</option>
                   </select>
                 </div>
                 <div class="field reflection-evidence-field">
@@ -354,7 +354,7 @@
               </div>
               <div class="reflection-review-actions">
                 <button type="button" class="primary compact" id="btn-save-reflection-review">得出结论</button>
-                <button type="button" class="tool-button danger" id="btn-clear-reflection">删除这次试做</button>
+                <button type="button" class="tool-button danger" id="btn-clear-reflection">删除这份本周清单</button>
               </div>
             </details>
 

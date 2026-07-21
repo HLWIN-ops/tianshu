@@ -81,8 +81,8 @@ async function main() {
     await page.locator('#page-paipan.active').waitFor({ state: 'visible' });
 
     const lede = await page.locator('.reflection-lede').innerText();
-    assert.match(lede, /不用先懂命理.*7 天任务.*今天.*第 3 天.*第 7 天.*真实结果/s, '必须直接说明用户今天做什么、何时检查，以及七天后如何判断');
-    assert.match(await page.locator('.reflection-payoff').innerText(), /保留.*调整.*放弃/s, '未开始时也必须直接说明七天后的三种结果');
+    assert.match(lede, /本周的 7 天任务.*今天能开始.*照着做 7 天.*第 7 天看结果.*跳过/s, '必须用白话说明本周要做什么、持续多久，以及何时判断结果');
+    assert.match(await page.locator('.reflection-payoff').innerText(), /继续用.*改一下.*不采用/s, '未开始时也必须直接说明七天后的三种结果');
     assert.match(await page.locator('#reflection-criterion-preview').innerText(), /第 7 天.*结果|反馈|记录/s, '默认卡面必须直接显示怎样才算完成');
     await capture(page, 'mobile-empty-report');
     assert.equal(await page.locator('#reflection-editor').getAttribute('open'), null, '默认态只展示生成结果，不应先让用户填写表单');
@@ -114,7 +114,7 @@ async function main() {
     });
     await page.locator('#reflection-evidence').fill('提前记录的事实不应直接结案。');
     await page.locator('#btn-save-reflection-review').click();
-    await page.waitForFunction(() => /先完成 7 天试做/.test(document.querySelector('#toast')?.textContent || ''));
+    await page.waitForFunction(() => /先按本周清单做满 7 天/.test(document.querySelector('#toast')?.textContent || ''));
     assert.equal(await page.locator('#btn-new-reflection').isHidden(), true, '到期前不得生成结论或开启下一轮');
     assert.equal(await page.locator('#reflection-status').inputValue(), 'planned', '拒绝提前结案后必须回滚可见状态');
     await capture(page, 'mobile-t0-report');
@@ -205,6 +205,27 @@ async function main() {
     await page.locator('#btn-save-reflection-review').click();
     assert.equal(await page.locator('#reflection-card').getAttribute('data-state'), 'done', '旧版记录补写事实后应完成迁移闭环');
     assert.match(await page.locator('#reflection-outcome').innerText(), /现实中有用.*可以保留/s, '旧版记录应生成明确结论');
+
+    await page.evaluate(({ profileKey, reflectionKey }) => {
+      const profile = JSON.parse(localStorage.getItem(profileKey) || '[]')[0];
+      const cycle = '2026-08-20-legacy';
+      const vague = {
+        id: `${profile.id}|${cycle}`, profileId: profile.id, cycle,
+        startedAt: '2026-08-20T02:00:00.000Z', dueAt: '2026-08-27T02:00:00.000Z',
+        subject: '交出一个能给别人看的第一版',
+        action: '围绕“交出一个能给别人看的第一版”，只选一个最小结果，今天写清完成标准，并在 7 天内做出可展示版本。',
+        criterion: '第 7 天能展示一个真实结果。', evidence: '', status: 'planned',
+        updatedAt: '2026-08-20T02:00:00.000Z',
+      };
+      localStorage.setItem(reflectionKey, JSON.stringify([vague]));
+    }, { profileKey: PROFILE_KEY, reflectionKey: REFLECTION_KEY });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.dataset.appReady === 'true');
+    await openSavedChart(page);
+    const upgraded = await page.evaluate(key => JSON.parse(localStorage.getItem(key) || '[]')[0], REFLECTION_KEY);
+    assert.equal(upgraded.planVersion, 2, '已保存的模糊旧任务必须自动升级到新版行动清单');
+    assert.match(upgraded.subject, /打开备忘录.*最重要的一件事.*下一步.*一个人/s, '升级后必须给没有现成项目的用户一个可直接开始的产出');
+    assert.doesNotMatch(await page.locator('#reflection-current-subject').innerText(), /^交出一个能给别人看的第一版$/, '界面不得继续显示旧版模糊任务');
 
     assert.deepEqual(errors, [], `file:// 旅程出现浏览器错误：\n${errors.join('\n')}`);
     await context.close();
